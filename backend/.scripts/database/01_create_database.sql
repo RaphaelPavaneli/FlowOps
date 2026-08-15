@@ -1,0 +1,13 @@
+USE [master];
+GO
+
+IF DB_ID(N'DB_FLOWOPS') IS NULL
+BEGIN
+    PRINT N'Criando o banco DB_FLOWOPS...';
+    CREATE DATABASE [DB_FLOWOPS];
+END
+ELSE
+BEGIN
+    PRINT N'O banco DB_FLOWOPS já existe.';
+END;
+GO  
