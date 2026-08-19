@@ -22,7 +22,7 @@ class JwtTokenService(TokenService):
     ) -> None:
         if len(secret_key) < 32:
             raise ValueError(
-                "FLOWOPS_JWT_SECRET_KEY deve possuir pelo menos 32 caracteres."
+                "JWT_SECRET_KEY deve possuir pelo menos 32 caracteres."
             )
 
         self._secret_key = secret_key

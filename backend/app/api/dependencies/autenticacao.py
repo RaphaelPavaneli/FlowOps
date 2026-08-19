@@ -41,11 +41,11 @@ def get_password_hasher() -> PasswordHasher:
 
 def get_token_service() -> TokenService:
     return JwtTokenService(
-        secret_key=settings.jwt_secret_key.get_secret_value(),
-        algorithm=settings.jwt_algorithm,
-        issuer=settings.jwt_issuer,
-        audience=settings.jwt_audience,
-        expire_minutes=settings.access_token_expire_minutes,
+        secret_key=settings.jwt.secret_key.get_secret_value(),
+        algorithm=settings.jwt.algorithm,
+        issuer=settings.jwt.issuer,
+        audience=settings.jwt.audience,
+        expire_minutes=settings.jwt.access_token_expire_minutes,
     )
 
 

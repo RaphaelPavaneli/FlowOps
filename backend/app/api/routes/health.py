@@ -17,6 +17,6 @@ def get_health() -> HealthResponse:
     """Return the current API status."""
     return HealthResponse(
         status="ok",
-        service=settings.app_name,
-        version=settings.app_version,
+        service=settings.app.name,
+        version=settings.app.version,
     )

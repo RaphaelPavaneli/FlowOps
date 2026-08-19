@@ -8,7 +8,11 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 TEST_JWT_SECRET = "chave-exclusiva-dos-testes-com-mais-de-32-caracteres"
-os.environ.setdefault("FLOWOPS_JWT_SECRET_KEY", TEST_JWT_SECRET)
+os.environ.setdefault("DB_SERVER", "localhost")
+os.environ.setdefault("DB_NAME", "DB_FLOWOPS_TEST")
+os.environ.setdefault("DB_USER", "flowops_test")
+os.environ.setdefault("DB_PASSWORD", "senha-exclusiva-dos-testes")
+os.environ.setdefault("JWT_SECRET_KEY", TEST_JWT_SECRET)
 
 from app.api.dependencies.autenticacao import get_token_service  # noqa: E402
 from app.infrastructure.database.connection import Base, get_db_session  # noqa: E402

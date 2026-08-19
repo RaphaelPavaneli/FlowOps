@@ -8,7 +8,8 @@ class Argon2PasswordHasher(PasswordHasher):
 
     def __init__(self) -> None:
         self._password_hash = PasswordHash.recommended()
-        self._dummy_hash = self._password_hash.hash("senha-interna-nao-utilizavel")
+        # Gera um hash fictício para manter o tempo de verificação semelhante
+        self._dummy_hash = self._password_hash.hash("valor-interno-nao-utilizado-para-autenticacao")
 
     def gerar_hash(self, senha: str) -> str:
         return self._password_hash.hash(senha)
