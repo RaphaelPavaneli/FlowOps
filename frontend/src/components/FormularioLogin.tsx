@@ -7,12 +7,16 @@ import {
   LockKeyhole,
   Mail,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-import { autenticar, ErroAutenticacao } from "../services/autenticacao";
+import { useAutenticacao } from "../contexts/ContextoAutenticacao";
+import { ErroAutenticacao } from "../services/autenticacao";
 
 type EstadoMensagem = "erro" | "sucesso" | null;
 
 export function FormularioLogin() {
+  const { entrar } = useAutenticacao();
+  const navegar = useNavigate();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [senhaVisivel, setSenhaVisivel] = useState(false);
@@ -35,9 +39,15 @@ export function FormularioLogin() {
     setCarregando(true);
 
     try {
-      await autenticar({ email: email.trim(), senha });
+      const usuarioAtual = await entrar({ email: email.trim(), senha });
       setMensagem("Acesso validado com sucesso.");
       setEstadoMensagem("sucesso");
+      navegar(
+        usuarioAtual.perfil_acesso === "administrador"
+          ? "/app/dashboard"
+          : "/app",
+        { replace: true },
+      );
     } catch (erro) {
       setMensagem(
         erro instanceof ErroAutenticacao

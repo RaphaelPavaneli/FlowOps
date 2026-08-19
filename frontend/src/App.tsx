@@ -1,32 +1,73 @@
-import { FormularioLogin } from "./components/FormularioLogin";
+import { Navigate, Route, Routes } from "react-router-dom";
+
+import { RotaProtegida } from "./components/RotaProtegida";
+import { LayoutAutenticado } from "./components/LayoutAutenticado";
+import { useAutenticacao } from "./contexts/ContextoAutenticacao";
+import { PaginaAcessoNegado } from "./pages/PaginaAcessoNegado";
+import { PaginaAdministracao } from "./pages/PaginaAdministracao";
+import { PaginaAreaAutenticada } from "./pages/PaginaAreaAutenticada";
+import { PaginaDashboard } from "./pages/PaginaDashboard";
+import { PaginaInicial } from "./pages/PaginaInicial";
+import { PaginaLogin } from "./pages/PaginaLogin";
+import { PaginaNaoEncontrada } from "./pages/PaginaNaoEncontrada";
 
 function App() {
+  const { autenticado, carregandoSessao, usuario } = useAutenticacao();
+
+  if (carregandoSessao) {
+    return (
+      <main className="pagina-carregando-sessao" aria-busy="true">
+        <span className="indicador-carregamento indicador-carregamento-azul" />
+        <p>Validando sua sessão...</p>
+      </main>
+    );
+  }
+
   return (
-    <main className="pagina-login">
-      <div className="brilho brilho-superior" aria-hidden="true" />
-      <div className="brilho brilho-inferior" aria-hidden="true" />
-      <div className="forma-abstrata forma-superior" aria-hidden="true" />
-      <div className="forma-abstrata forma-inferior" aria-hidden="true" />
-
-      <header className="cabecalho-login">
-        <a className="marca" href="/" aria-label="FlowOps — início">
-          <span className="simbolo-marca" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-          </span>
-          <span>FlowOps</span>
-        </a>
-      </header>
-
-      <section className="conteudo-login" aria-labelledby="titulo-login">
-        <FormularioLogin />
-      </section>
-
-      <footer className="rodape-login">
-        © {new Date().getFullYear()} FlowOps. Gestão que flui com você.
-      </footer>
-    </main>
+    <Routes>
+      <Route path="/" element={<PaginaInicial />} />
+      <Route
+        path="/login"
+        element={
+          autenticado ? (
+            <Navigate
+              to={usuario?.perfil_acesso === "administrador" ? "/app/dashboard" : "/app"}
+              replace
+            />
+          ) : (
+            <PaginaLogin />
+          )
+        }
+      />
+      <Route
+        path="/app"
+        element={
+          <RotaProtegida>
+            <LayoutAutenticado />
+          </RotaProtegida>
+        }
+      >
+        <Route index element={<PaginaAreaAutenticada />} />
+        <Route
+          path="dashboard"
+          element={
+            <RotaProtegida perfisPermitidos={["administrador"]}>
+              <PaginaDashboard />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="administracao"
+          element={
+            <RotaProtegida perfisPermitidos={["administrador"]}>
+              <PaginaAdministracao />
+            </RotaProtegida>
+          }
+        />
+        <Route path="acesso-negado" element={<PaginaAcessoNegado />} />
+      </Route>
+      <Route path="*" element={<PaginaNaoEncontrada />} />
+    </Routes>
   );
 }
 

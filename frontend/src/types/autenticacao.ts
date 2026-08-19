@@ -8,3 +8,13 @@ export interface TokenAutenticacao {
   token_type: "bearer";
   expires_in: number;
 }
+
+export type PerfilAcesso = "administrador" | "usuario";
+
+export interface UsuarioAutenticado {
+  id: string;
+  nome: string;
+  email: string;
+  perfil_acesso: PerfilAcesso;
+  ativo: boolean;
+}

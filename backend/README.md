@@ -18,7 +18,9 @@ são escritos em português brasileiro.
 - SQL Server 2022 ou superior. O ambiente original usa SQL Server 2025.
 - Microsoft ODBC Driver 18 for SQL Server.
 - `sqlcmd`, recomendado para executar o bootstrap automatizado.
-- Banco local acessível pela conta Windows ou por um login SQL.
+- SQL Server em modo de autenticação mista.
+- Conta Windows com permissão administrativa para executar o bootstrap. O
+  próprio script pode criar o login SQL `flowops_app`.
 
 ## Preparação do ambiente
 
@@ -32,59 +34,48 @@ Copy-Item .env.example .env
 python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-Copie a chave gerada para `FLOWOPS_JWT_SECRET_KEY` no `.env`.
+Copie a chave gerada para `JWT_SECRET_KEY` no `.env`.
 
 ## Variáveis do banco
 
-Para autenticação integrada do Windows:
+O backend usa exclusivamente autenticação SQL com usuário e senha:
 
 ```env
-FLOWOPS_DB_SERVER=localhost
-FLOWOPS_DB_PORT=
-FLOWOPS_DB_NAME=DB_FLOWOPS
-FLOWOPS_DB_DRIVER=ODBC Driver 18 for SQL Server
-FLOWOPS_DB_AUTH_MODE=windows
-FLOWOPS_DB_USER=
-FLOWOPS_DB_PASSWORD=
-FLOWOPS_DB_ENCRYPT=true
-FLOWOPS_DB_TRUST_SERVER_CERTIFICATE=true
+DB_SERVER=localhost
+DB_PORT=1433
+DB_NAME=DB_FLOWOPS
+DB_USER=flowops_app
+DB_PASSWORD=defina-uma-senha-local-segura
+DB_TRUST_SERVER_CERTIFICATE=true
+JWT_SECRET_KEY=defina-uma-chave-aleatoria-com-no-minimo-32-caracteres
 ```
 
-Para um login SQL específico da aplicação:
-
-```env
-FLOWOPS_DB_AUTH_MODE=sql
-FLOWOPS_DB_USER=flowops_app
-FLOWOPS_DB_PASSWORD=defina-uma-senha-local-segura
-```
-
-O modo `sql` exige que a instância esteja com autenticação mista habilitada.
 Nunca versione o arquivo `.env` ou senhas reais. Em produção, use certificado
-confiável e `FLOWOPS_DB_TRUST_SERVER_CERTIFICATE=false`.
+confiável e remova `DB_TRUST_SERVER_CERTIFICATE=true`, pois o padrão seguro no
+código é `false`.
+
+Valores estáveis, como o driver ODBC, criptografia, algoritmo, emissor,
+audiência e duração do JWT, permanecem versionados no código.
 
 ## Configuração automatizada do banco
 
 Os scripts em `.scripts/database` preparam o banco. O Alembic é a única fonte
 de verdade para schemas, tabelas e índices.
 
-Com autenticação do Windows:
+O bootstrap usa autenticação Windows somente para criar o banco e executar as
+migrations administrativas. A aplicação continua usando exclusivamente o
+login SQL `flowops_app`:
 
 ```powershell
-.\.scripts\database\setup_database.ps1 -ApplicationAuthMode windows
+.\.scripts\database\setup_database.ps1
 ```
 
-Com login SQL `flowops_app`:
-
-```powershell
-.\.scripts\database\setup_database.ps1 -ApplicationAuthMode sql
-```
-
-No segundo modo, a senha é solicitada durante a execução e não é gravada. A
-ordem automatizada é:
+A senha do login SQL é solicitada durante a execução e não é gravada. A ordem
+automatizada é:
 
 1. Criar `DB_FLOWOPS`, caso não exista.
 2. Executar `python -m alembic upgrade head`.
-3. Criar opcionalmente o login e o usuário `flowops_app`.
+3. Criar o login e o usuário `flowops_app`, caso ainda não existam.
 4. Conceder apenas `CONNECT`, `SELECT`, `INSERT`, `UPDATE` e `DELETE` em `auth`.
 5. Validar o schema, a tabela, o índice e as permissões.
 
