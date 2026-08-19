@@ -1,7 +1,5 @@
 param(
-    [string]$Server = "localhost",
-    [ValidateSet("windows", "sql")]
-    [string]$ApplicationAuthMode = "windows"
+    [string]$Server = "localhost"
 )
 
 $ErrorActionPreference = "Stop"
@@ -31,46 +29,48 @@ Push-Location $backendDirectory
 try {
     Invoke-SqlScript "01_create_database.sql"
 
-    $previousServer = $env:FLOWOPS_DB_SERVER
-    $previousDatabase = $env:FLOWOPS_DB_NAME
-    $previousAuthMode = $env:FLOWOPS_DB_AUTH_MODE
+    $previousServer = $env:DB_SERVER
+    $previousDatabase = $env:DB_NAME
+    $previousMigrationConnection = (
+        $env:FLOWOPS_MIGRATION_TRUSTED_CONNECTION
+    )
 
-    $env:FLOWOPS_DB_SERVER = $Server
-    $env:FLOWOPS_DB_NAME = "DB_FLOWOPS"
-    $env:FLOWOPS_DB_AUTH_MODE = "windows"
+    $env:DB_SERVER = $Server
+    $env:DB_NAME = "DB_FLOWOPS"
+    $env:FLOWOPS_MIGRATION_TRUSTED_CONNECTION = "true"
 
     & $pythonPath -m alembic upgrade head
     if ($LASTEXITCODE -ne 0) {
         throw "Falha ao aplicar as migrations Alembic."
     }
 
-    if ($ApplicationAuthMode -eq "sql") {
-        $securePassword = Read-Host "Senha do login flowops_app" -AsSecureString
-        $passwordPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR(
-            $securePassword
-        )
+    $securePassword = Read-Host "Senha do login flowops_app" -AsSecureString
+    $passwordPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR(
+        $securePassword
+    )
 
-        try {
-            $plainPassword = [Runtime.InteropServices.Marshal]::PtrToStringBSTR(
-                $passwordPointer
-            )
-            $env:FLOWOPS_APPLICATION_PASSWORD = $plainPassword.Replace("'", "''")
-            Invoke-SqlScript "02_create_application_login.sql"
-            Invoke-SqlScript "03_grant_application_permissions.sql"
-        }
-        finally {
-            [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($passwordPointer)
-            Remove-Item Env:FLOWOPS_APPLICATION_PASSWORD -ErrorAction SilentlyContinue
-            $plainPassword = $null
-        }
+    try {
+        $plainPassword = [Runtime.InteropServices.Marshal]::PtrToStringBSTR(
+            $passwordPointer
+        )
+        $env:FLOWOPS_APPLICATION_PASSWORD = $plainPassword.Replace("'", "''")
+        Invoke-SqlScript "02_create_application_login.sql"
+        Invoke-SqlScript "03_grant_application_permissions.sql"
+    }
+    finally {
+        [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($passwordPointer)
+        Remove-Item Env:FLOWOPS_APPLICATION_PASSWORD -ErrorAction SilentlyContinue
+        $plainPassword = $null
     }
 
     Invoke-SqlScript "validate_database.sql"
     Write-Host "Banco configurado e validado com sucesso."
 }
 finally {
-    $env:FLOWOPS_DB_SERVER = $previousServer
-    $env:FLOWOPS_DB_NAME = $previousDatabase
-    $env:FLOWOPS_DB_AUTH_MODE = $previousAuthMode
+    $env:DB_SERVER = $previousServer
+    $env:DB_NAME = $previousDatabase
+    $env:FLOWOPS_MIGRATION_TRUSTED_CONNECTION = (
+        $previousMigrationConnection
+    )
     Pop-Location
 }
