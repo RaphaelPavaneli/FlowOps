@@ -37,6 +37,7 @@ engine = create_engine(
     build_database_url(settings.db),
     pool_pre_ping=True,
 )
+
 SessionLocal = sessionmaker(
     bind=engine,
     autoflush=False,
