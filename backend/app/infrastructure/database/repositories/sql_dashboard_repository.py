@@ -1,4 +1,4 @@
-from sqlalchemy import case, func, select
+from sqlalchemy import case, func, select, true, false
 from sqlalchemy.orm import Session
 
 from app.domain.enums.perfil_acesso import PerfilAcesso
@@ -20,10 +20,10 @@ class SqlDashboardRepository(DashboardRepository):
         resultado = self._session.execute(
             select(
                 func.count(UsuarioModel.id).label("total"),
-                self._somar_quando(UsuarioModel.ativo.is_(True)).label(
+                self._somar_quando(UsuarioModel.ativo == true()).label(
                     "ativos"
                 ),
-                self._somar_quando(UsuarioModel.ativo.is_(False)).label(
+                self._somar_quando(UsuarioModel.ativo == false()).label(
                     "inativos"
                 ),
                 self._somar_quando(
