@@ -1,4 +1,4 @@
-import type { ResumoDashboard } from "../types/dashboard";
+import type { ResumoDashboardAdministrativo } from "../types/dashboard";
 
 interface RespostaErroApi {
   detail?: string;
@@ -14,9 +14,9 @@ export class ErroDashboard extends Error {
   }
 }
 
-export async function obterResumoDashboard(
+export async function obterResumoDashboardAdministrativo(
   token: string,
-): Promise<ResumoDashboard> {
+): Promise<ResumoDashboardAdministrativo> {
   let resposta: Response;
 
   try {
@@ -37,5 +37,5 @@ export async function obterResumoDashboard(
     );
   }
 
-  return resposta.json() as Promise<ResumoDashboard>;
+  return resposta.json() as Promise<ResumoDashboardAdministrativo>;
 }

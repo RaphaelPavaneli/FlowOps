@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   ArrowLeft,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  LoaderCircle,
+  Power,
   RefreshCw,
+  Save,
   ShieldCheck,
   UserCheck,
   UsersRound,
@@ -12,8 +16,17 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 
 import { useAutenticacao } from "../contexts/ContextoAutenticacao";
-import { ErroUsuarios, listarUsuarios } from "../services/usuarios";
-import type { ListaUsuariosResponse } from "../types/usuarios";
+import {
+  alterarPerfilUsuario,
+  alterarStatusUsuario,
+  ErroUsuarios,
+  listarUsuarios,
+} from "../services/usuarios";
+import type { PerfilAcesso } from "../types/autenticacao";
+import type {
+  ListaUsuariosResponse,
+  UsuarioAdministracao,
+} from "../types/usuarios";
 
 const ITENS_POR_PAGINA = 20;
 const classesBotaoPaginacao =
@@ -24,10 +37,20 @@ function formatarPerfil(perfil: "administrador" | "usuario") {
 }
 
 export function PaginaGestaoUsuarios() {
-  const { token, sair } = useAutenticacao();
+  const { token, usuario: usuarioAutenticado, sair } = useAutenticacao();
   const navegar = useNavigate();
   const [pagina, setPagina] = useState(1);
   const [resultado, setResultado] = useState<ListaUsuariosResponse | null>(null);
+  const [perfisSelecionados, setPerfisSelecionados] = useState<
+    Record<string, PerfilAcesso>
+  >({});
+  const [usuarioEmAlteracaoId, setUsuarioEmAlteracaoId] = useState<string | null>(
+    null,
+  );
+  const [mensagemAcao, setMensagemAcao] = useState<{
+    tipo: "sucesso" | "erro";
+    texto: string;
+  } | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
 
@@ -42,9 +65,19 @@ export function PaginaGestaoUsuarios() {
 
     setCarregando(true);
     setErro("");
+    setMensagemAcao(null);
 
     try {
-      setResultado(await listarUsuarios(token, pagina, ITENS_POR_PAGINA));
+      const resposta = await listarUsuarios(token, pagina, ITENS_POR_PAGINA);
+      setResultado(resposta);
+      setPerfisSelecionados(
+        Object.fromEntries(
+          resposta.usuarios.map((usuario) => [
+            usuario.id,
+            usuario.perfil_acesso,
+          ]),
+        ),
+      );
     } catch (falha) {
       if (falha instanceof ErroUsuarios && falha.status === 401) {
         sair();
@@ -70,7 +103,119 @@ export function PaginaGestaoUsuarios() {
     void carregarUsuarios();
   }, [carregarUsuarios]);
 
+  function atualizarUsuarioNaLista(usuarioAtualizado: UsuarioAdministracao) {
+    setResultado((atual) =>
+      atual
+        ? {
+            ...atual,
+            usuarios: atual.usuarios.map((usuario) =>
+              usuario.id === usuarioAtualizado.id ? usuarioAtualizado : usuario,
+            ),
+          }
+        : atual,
+    );
+    setPerfisSelecionados((atuais) => ({
+      ...atuais,
+      [usuarioAtualizado.id]: usuarioAtualizado.perfil_acesso,
+    }));
+  }
+
+  function tratarFalhaAlteracao(falha: unknown) {
+    if (falha instanceof ErroUsuarios && falha.status === 401) {
+      sair();
+      return;
+    }
+
+    if (falha instanceof ErroUsuarios && falha.status === 403) {
+      navegar("/app/acesso-negado", { replace: true });
+      return;
+    }
+
+    setMensagemAcao({
+      tipo: "erro",
+      texto:
+        falha instanceof ErroUsuarios
+          ? falha.message
+          : "Ocorreu um erro inesperado ao alterar o usuário.",
+    });
+  }
+
+  async function confirmarAlteracaoPerfil(usuario: UsuarioAdministracao) {
+    if (!token) {
+      return;
+    }
+
+    const novoPerfil =
+      perfisSelecionados[usuario.id] ?? usuario.perfil_acesso;
+    if (novoPerfil === usuario.perfil_acesso) {
+      return;
+    }
+
+    const confirmado = window.confirm(
+      `Deseja alterar o perfil de ${usuario.nome} para ${formatarPerfil(novoPerfil)}?`,
+    );
+    if (!confirmado) {
+      return;
+    }
+
+    setUsuarioEmAlteracaoId(usuario.id);
+    setMensagemAcao(null);
+
+    try {
+      const usuarioAtualizado = await alterarPerfilUsuario(
+        token,
+        usuario.id,
+        novoPerfil,
+      );
+      atualizarUsuarioNaLista(usuarioAtualizado);
+      setMensagemAcao({
+        tipo: "sucesso",
+        texto: `Perfil de ${usuario.nome} alterado com sucesso.`,
+      });
+    } catch (falha) {
+      tratarFalhaAlteracao(falha);
+    } finally {
+      setUsuarioEmAlteracaoId(null);
+    }
+  }
+
+  async function confirmarAlteracaoStatus(usuario: UsuarioAdministracao) {
+    if (!token) {
+      return;
+    }
+
+    const novoStatus = !usuario.ativo;
+    const acao = novoStatus ? "ativar" : "desativar";
+    const confirmado = window.confirm(
+      `Deseja ${acao} a conta de ${usuario.nome}?`,
+    );
+    if (!confirmado) {
+      return;
+    }
+
+    setUsuarioEmAlteracaoId(usuario.id);
+    setMensagemAcao(null);
+
+    try {
+      const usuarioAtualizado = await alterarStatusUsuario(
+        token,
+        usuario.id,
+        novoStatus,
+      );
+      atualizarUsuarioNaLista(usuarioAtualizado);
+      setMensagemAcao({
+        tipo: "sucesso",
+        texto: `Conta de ${usuario.nome} ${novoStatus ? "ativada" : "desativada"} com sucesso.`,
+      });
+    } catch (falha) {
+      tratarFalhaAlteracao(falha);
+    } finally {
+      setUsuarioEmAlteracaoId(null);
+    }
+  }
+
   const totalPaginas = Math.max(resultado?.total_paginas ?? 1, 1);
+  const alteracaoEmAndamento = usuarioEmAlteracaoId !== null;
 
   return (
     <main className="min-h-[calc(100vh-77px)] bg-[#f7f9fc] max-[700px]:min-h-[calc(100vh-116px)]">
@@ -103,6 +248,22 @@ export function PaginaGestaoUsuarios() {
             </span>
           )}
         </section>
+
+        {mensagemAcao && (
+          <div
+            className={`mb-5 flex items-center gap-2.5 rounded-[12px] border px-4 py-3 text-[12.5px] font-semibold ${
+              mensagemAcao.tipo === "sucesso"
+                ? "border-[#ccebd7] bg-[#f0fdf4] text-[#237a45]"
+                : "border-[#ecd8d6] bg-[#fff7f6] text-[#8f3029]"
+            }`}
+            role={mensagemAcao.tipo === "erro" ? "alert" : "status"}
+          >
+            {mensagemAcao.tipo === "sucesso" && (
+              <CheckCircle2 size={17} aria-hidden="true" />
+            )}
+            {mensagemAcao.texto}
+          </div>
+        )}
 
         {carregando && (
           <section
@@ -151,55 +312,138 @@ export function PaginaGestaoUsuarios() {
               className="overflow-hidden rounded-[18px] border border-[#dfe7f1] bg-white shadow-[0_14px_38px_rgba(30,64,175,0.05)]"
               aria-label="Usuários cadastrados"
             >
-              <div className="hidden grid-cols-[minmax(0,1.5fr)_minmax(0,1.7fr)_minmax(130px,0.7fr)_minmax(100px,0.5fr)] gap-5 border-b border-[#e7ecf3] bg-[#f8fafd] px-6 py-3.5 text-[10px] font-bold tracking-[0.07em] text-[#7a8799] uppercase min-[701px]:grid">
+              <div className="hidden grid-cols-[minmax(0,1.25fr)_minmax(0,1.45fr)_minmax(150px,0.8fr)_minmax(90px,0.5fr)_minmax(190px,0.9fr)] gap-4 border-b border-[#e7ecf3] bg-[#f8fafd] px-6 py-3.5 text-[10px] font-bold tracking-[0.07em] text-[#7a8799] uppercase min-[701px]:grid">
                 <span>Usuário</span>
                 <span>E-mail</span>
                 <span>Perfil</span>
                 <span>Status</span>
+                <span>Ações</span>
               </div>
 
               <ul className="m-0 list-none p-0">
-                {resultado.usuarios.map((usuario) => (
-                  <li
-                    className="grid gap-4 border-b border-[#edf1f6] px-5 py-5 last:border-b-0 min-[701px]:grid-cols-[minmax(0,1.5fr)_minmax(0,1.7fr)_minmax(130px,0.7fr)_minmax(100px,0.5fr)] min-[701px]:items-center min-[701px]:gap-5 min-[701px]:px-6 min-[701px]:py-[17px]"
-                    key={usuario.id}
-                  >
+                {resultado.usuarios.map((usuario) => {
+                  const propriaConta = usuario.id === usuarioAutenticado?.id;
+                  const perfilSelecionado =
+                    perfisSelecionados[usuario.id] ?? usuario.perfil_acesso;
+                  const perfilFoiAlterado =
+                    perfilSelecionado !== usuario.perfil_acesso;
+                  const alterandoEsteUsuario =
+                    usuarioEmAlteracaoId === usuario.id;
+
+                  return (
+                    <li
+                      className="grid gap-4 border-b border-[#edf1f6] px-5 py-5 last:border-b-0 min-[701px]:grid-cols-[minmax(0,1.25fr)_minmax(0,1.45fr)_minmax(150px,0.8fr)_minmax(90px,0.5fr)_minmax(190px,0.9fr)] min-[701px]:items-center min-[701px]:gap-4 min-[701px]:px-6 min-[701px]:py-[17px]"
+                      key={usuario.id}
+                    >
                     <div className="flex min-w-0 items-center gap-3">
                       <span className="grid size-9 shrink-0 place-items-center rounded-[11px] bg-flowops-50 text-[11px] font-bold text-flowops-700">
                         {usuario.nome.trim().charAt(0).toUpperCase()}
                       </span>
-                      <strong className="overflow-hidden text-ellipsis text-[13px] text-[#344055]">
-                        {usuario.nome}
-                      </strong>
+                      <div className="min-w-0">
+                        <strong className="block overflow-hidden text-ellipsis text-[13px] text-[#344055]">
+                          {usuario.nome}
+                        </strong>
+                        {propriaConta && (
+                          <small className="mt-0.5 block text-[10px] font-semibold text-flowops-600">
+                            Sua conta
+                          </small>
+                        )}
+                      </div>
                     </div>
 
                     <span className="min-w-0 overflow-hidden text-ellipsis text-[12.5px] text-[#667388]">
                       {usuario.email}
                     </span>
 
-                    <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-[#eef4ff] px-2.5 py-1.5 text-[10.5px] font-bold text-flowops-700">
-                      {usuario.perfil_acesso === "administrador" && (
-                        <ShieldCheck size={13} aria-hidden="true" />
-                      )}
-                      {formatarPerfil(usuario.perfil_acesso)}
-                    </span>
+                    <label className="grid gap-1.5">
+                      <span className="text-[10px] font-bold tracking-[0.05em] text-[#7a8799] uppercase min-[701px]:sr-only">
+                        Perfil
+                      </span>
+                      <select
+                        className="min-h-10 w-full rounded-[10px] border border-[#d6e0ee] bg-white px-2.5 text-[11.5px] font-semibold text-[#526077] outline-none transition-colors focus:border-flowops-500 focus:ring-2 focus:ring-flowops-100 disabled:cursor-not-allowed disabled:bg-[#f3f5f8] disabled:text-[#8a95a5]"
+                        aria-label={`Perfil de ${usuario.nome}`}
+                        value={perfilSelecionado}
+                        disabled={propriaConta || alteracaoEmAndamento}
+                        onChange={(evento) =>
+                          setPerfisSelecionados((atuais) => ({
+                            ...atuais,
+                            [usuario.id]: evento.target.value as PerfilAcesso,
+                          }))
+                        }
+                      >
+                        <option value="usuario">Usuário</option>
+                        <option value="administrador">Administrador</option>
+                      </select>
+                    </label>
 
-                    <span
-                      className={`inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[10.5px] font-bold ${
-                        usuario.ativo
-                          ? "bg-[#ecfdf3] text-[#237a45]"
-                          : "bg-[#fff1f0] text-[#a33a32]"
-                      }`}
-                    >
-                      {usuario.ativo ? (
-                        <UserCheck size={13} aria-hidden="true" />
-                      ) : (
-                        <UserX size={13} aria-hidden="true" />
-                      )}
-                      {usuario.ativo ? "Ativo" : "Inativo"}
-                    </span>
-                  </li>
-                ))}
+                    <div>
+                      <span className="mb-1.5 block text-[10px] font-bold tracking-[0.05em] text-[#7a8799] uppercase min-[701px]:sr-only">
+                        Status
+                      </span>
+                      <span
+                        className={`inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[10.5px] font-bold ${
+                          usuario.ativo
+                            ? "bg-[#ecfdf3] text-[#237a45]"
+                            : "bg-[#fff1f0] text-[#a33a32]"
+                        }`}
+                      >
+                        {usuario.ativo ? (
+                          <UserCheck size={13} aria-hidden="true" />
+                        ) : (
+                          <UserX size={13} aria-hidden="true" />
+                        )}
+                        {usuario.ativo ? "Ativo" : "Inativo"}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        className="inline-flex min-h-9 cursor-pointer items-center justify-center gap-1.5 rounded-[9px] border border-[#cfddf4] bg-white px-3 text-[10.5px] font-bold text-flowops-700 transition-colors enabled:hover:bg-flowops-50 disabled:cursor-not-allowed disabled:opacity-45"
+                        type="button"
+                        disabled={
+                          propriaConta ||
+                          !perfilFoiAlterado ||
+                          alteracaoEmAndamento
+                        }
+                        onClick={() => void confirmarAlteracaoPerfil(usuario)}
+                      >
+                        {alterandoEsteUsuario ? (
+                          <LoaderCircle
+                            className="animate-spin"
+                            size={14}
+                            aria-hidden="true"
+                          />
+                        ) : (
+                          <Save size={14} aria-hidden="true" />
+                        )}
+                        Salvar perfil
+                      </button>
+
+                      <button
+                        className={`inline-flex min-h-9 cursor-pointer items-center justify-center gap-1.5 rounded-[9px] border px-3 text-[10.5px] font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${
+                          usuario.ativo
+                            ? "border-[#ecd8d6] bg-white text-[#9a3b34] enabled:hover:bg-[#fff5f4]"
+                            : "border-[#ccebd7] bg-white text-[#237a45] enabled:hover:bg-[#f0fdf4]"
+                        }`}
+                        type="button"
+                        disabled={propriaConta || alteracaoEmAndamento}
+                        onClick={() => void confirmarAlteracaoStatus(usuario)}
+                      >
+                        {alterandoEsteUsuario ? (
+                          <LoaderCircle
+                            className="animate-spin"
+                            size={14}
+                            aria-hidden="true"
+                          />
+                        ) : (
+                          <Power size={14} aria-hidden="true" />
+                        )}
+                        {usuario.ativo ? "Desativar" : "Ativar"}
+                      </button>
+                    </div>
+                    </li>
+                  );
+                })}
               </ul>
             </section>
 

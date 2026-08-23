@@ -1,4 +1,4 @@
-export interface ResumoUsuariosDashboard {
+export interface ResumoUsuariosDashboardAdministrativo {
   total: number;
   ativos: number;
   inativos: number;
@@ -6,6 +6,6 @@ export interface ResumoUsuariosDashboard {
   comuns: number;
 }
 
-export interface ResumoDashboard {
-  usuarios: ResumoUsuariosDashboard;
+export interface ResumoDashboardAdministrativo {
+  usuarios: ResumoUsuariosDashboardAdministrativo;
 }

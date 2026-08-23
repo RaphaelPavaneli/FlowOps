@@ -12,11 +12,11 @@ function formatarPerfil(perfil: "administrador" | "usuario") {
   return perfil === "administrador" ? "Administrador" : "Usuário";
 }
 
-export function PaginaAreaAutenticada() {
+export function PaginaMinhaConta() {
   const { usuario } = useAutenticacao();
 
   useEffect(() => {
-    document.title = "Área autenticada | FlowOps";
+    document.title = "Minha conta | FlowOps";
   }, []);
 
   if (!usuario) {

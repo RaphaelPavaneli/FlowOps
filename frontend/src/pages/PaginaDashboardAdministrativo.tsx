@@ -15,22 +15,22 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAutenticacao } from "../contexts/ContextoAutenticacao";
 import {
   ErroDashboard,
-  obterResumoDashboard,
+  obterResumoDashboardAdministrativo,
 } from "../services/dashboard";
-import type { ResumoDashboard } from "../types/dashboard";
+import type { ResumoDashboardAdministrativo } from "../types/dashboard";
 
 const classesEstadoDashboard =
   "flex min-h-[270px] flex-col items-center justify-center gap-3.5 rounded-[18px] border border-[#e1e8f2] bg-white/80 p-9 text-center text-flowops-cinza";
 
-export function PaginaDashboard() {
+export function PaginaDashboardAdministrativo() {
   const { token, usuario, sair } = useAutenticacao();
   const navegar = useNavigate();
-  const [resumo, setResumo] = useState<ResumoDashboard | null>(null);
+  const [resumo, setResumo] = useState<ResumoDashboardAdministrativo | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
 
   useEffect(() => {
-    document.title = "Dashboard | FlowOps";
+    document.title = "Dashboard administrativo | FlowOps";
   }, []);
 
   const carregarResumo = useCallback(async () => {
@@ -42,7 +42,7 @@ export function PaginaDashboard() {
     setErro("");
 
     try {
-      setResumo(await obterResumoDashboard(token));
+      setResumo(await obterResumoDashboardAdministrativo(token));
     } catch (falha) {
       if (falha instanceof ErroDashboard && falha.status === 401) {
         sair();
@@ -90,7 +90,7 @@ export function PaginaDashboard() {
               Bem-vindo, {usuario?.nome}
             </h1>
             <p className="mt-[13px] mb-0 text-[14.5px] leading-[1.7] text-flowops-cinza">
-              Acompanhe as principais informações administrativas da operação.
+              Acompanhe os principais indicadores de usuários da plataforma.
             </p>
           </div>
           <span className="inline-flex items-center gap-2 whitespace-nowrap rounded-[10px] border border-[#dde7f5] bg-white/75 px-3 py-[9px] text-[10.5px] font-semibold text-[#607087]">
@@ -165,14 +165,14 @@ export function PaginaDashboard() {
                 <span className="text-[9.5px] font-[750] tracking-[0.08em] text-flowops-700 uppercase">
                   Área exclusiva
                 </span>
-                <h2 className="mt-1 mb-0 text-[17px] text-[#283449]">Administração</h2>
+                <h2 className="mt-1 mb-0 text-[17px] text-[#283449]">Gerenciamento de usuários</h2>
                 <p className="mt-[7px] mb-0 text-[12.5px] leading-[1.6] text-[#68758a]">
-                  Gerencie configurações e os futuros módulos administrativos da plataforma.
+                  Gerencie perfis, permissões e o estado das contas da plataforma.
                 </p>
               </div>
               <Link
                 className="col-span-2 mt-1 inline-flex min-h-[46px] w-full items-center justify-center gap-[9px] rounded-xl border border-transparent bg-[linear-gradient(110deg,#1d4ed8,#3b82f6)] px-5 text-[13.5px] font-bold text-white no-underline shadow-[0_12px_24px_rgba(37,99,235,0.2)] transition-[transform,box-shadow] duration-150 hover:-translate-y-px hover:shadow-[0_15px_30px_rgba(37,99,235,0.27)] min-[701px]:col-span-1 min-[701px]:mt-0 min-[701px]:w-auto"
-                to="/app/administracao"
+                to="/app/administracao/usuarios"
               >
                 Acessar
                 <ArrowRight size={18} aria-hidden="true" />
