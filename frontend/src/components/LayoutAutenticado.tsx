@@ -45,27 +45,24 @@ export function LayoutAutenticado() {
           >
             <NavLink
               className={({ isActive }) => obterClasseNavegacao(isActive)}
-              to="/app"
-              end
+              to="/app/dashboard"
+            >
+              Dashboard
+            </NavLink>
+            {administrador && (
+              <NavLink
+                className={({ isActive }) => obterClasseNavegacao(isActive)}
+                to="/app/administracao"
+              >
+                Administração
+              </NavLink>
+            )}
+            <NavLink
+              className={({ isActive }) => obterClasseNavegacao(isActive)}
+              to="/app/minha-conta"
             >
               Minha conta
             </NavLink>
-            {administrador && (
-              <>
-                <NavLink
-                  className={({ isActive }) => obterClasseNavegacao(isActive)}
-                  to="/app/dashboard"
-                >
-                  Dashboard
-                </NavLink>
-                <NavLink
-                  className={({ isActive }) => obterClasseNavegacao(isActive)}
-                  to="/app/administracao"
-                >
-                  Administração
-                </NavLink>
-              </>
-            )}
           </nav>
 
           <div className="col-start-2 row-start-1 flex items-center justify-self-end gap-2.5 min-[961px]:col-start-3">

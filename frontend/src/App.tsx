@@ -5,15 +5,16 @@ import { LayoutAutenticado } from "./components/LayoutAutenticado";
 import { useAutenticacao } from "./contexts/ContextoAutenticacao";
 import { PaginaAcessoNegado } from "./pages/PaginaAcessoNegado";
 import { PaginaAdministracao } from "./pages/PaginaAdministracao";
-import { PaginaAreaAutenticada } from "./pages/PaginaAreaAutenticada";
-import { PaginaDashboard } from "./pages/PaginaDashboard";
+import { PaginaDashboardAdministrativo } from "./pages/PaginaDashboardAdministrativo";
+import { PaginaDashboardOperacional } from "./pages/PaginaDashboardOperacional";
 import { PaginaGestaoUsuarios } from "./pages/PaginaGestaoUsuarios";
 import { PaginaInicial } from "./pages/PaginaInicial";
 import { PaginaLogin } from "./pages/PaginaLogin";
+import { PaginaMinhaConta } from "./pages/PaginaMinhaConta";
 import { PaginaNaoEncontrada } from "./pages/PaginaNaoEncontrada";
 
 function App() {
-  const { autenticado, carregandoSessao, usuario } = useAutenticacao();
+  const { autenticado, carregandoSessao } = useAutenticacao();
 
   if (carregandoSessao) {
     return (
@@ -38,7 +39,7 @@ function App() {
         element={
           autenticado ? (
             <Navigate
-              to={usuario?.perfil_acesso === "administrador" ? "/app/dashboard" : "/app"}
+              to="/app/dashboard"
               replace
             />
           ) : (
@@ -54,12 +55,14 @@ function App() {
           </RotaProtegida>
         }
       >
-        <Route index element={<PaginaAreaAutenticada />} />
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<PaginaDashboardOperacional />} />
+        <Route path="minha-conta" element={<PaginaMinhaConta />} />
         <Route
-          path="dashboard"
+          path="administracao/dashboard"
           element={
             <RotaProtegida perfisPermitidos={["administrador"]}>
-              <PaginaDashboard />
+              <PaginaDashboardAdministrativo />
             </RotaProtegida>
           }
         />

@@ -42,15 +42,10 @@ export function FormularioLogin() {
     setCarregando(true);
 
     try {
-      const usuarioAtual = await entrar({ email: email.trim(), senha });
+      await entrar({ email: email.trim(), senha });
       setMensagem("Acesso validado com sucesso.");
       setEstadoMensagem("sucesso");
-      navegar(
-        usuarioAtual.perfil_acesso === "administrador"
-          ? "/app/dashboard"
-          : "/app",
-        { replace: true },
-      );
+      navegar("/app/dashboard", { replace: true });
     } catch (erro) {
       setMensagem(
         erro instanceof ErroAutenticacao

@@ -2,12 +2,7 @@ import { useEffect } from "react";
 import { ArrowLeft, ShieldX } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import { useAutenticacao } from "../contexts/ContextoAutenticacao";
-
 export function PaginaAcessoNegado() {
-  const { usuario } = useAutenticacao();
-  const destino = usuario?.perfil_acesso === "administrador" ? "/app/dashboard" : "/app";
-
   useEffect(() => {
     document.title = "Acesso negado | FlowOps";
   }, []);
@@ -31,7 +26,7 @@ export function PaginaAcessoNegado() {
       </p>
       <Link
         className="inline-flex min-h-[46px] items-center justify-center gap-[9px] rounded-xl border border-transparent bg-[linear-gradient(110deg,#1d4ed8,#3b82f6)] px-5 text-[13.5px] font-bold text-white no-underline shadow-[0_12px_24px_rgba(37,99,235,0.2)] transition-[transform,box-shadow] duration-150 hover:-translate-y-px hover:shadow-[0_15px_30px_rgba(37,99,235,0.27)]"
-        to={destino}
+        to="/app/dashboard"
       >
         <ArrowLeft size={18} aria-hidden="true" />
         Voltar para minha área

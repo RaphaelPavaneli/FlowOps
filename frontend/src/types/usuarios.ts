@@ -15,3 +15,11 @@ export interface ListaUsuariosResponse {
   total: number;
   total_paginas: number;
 }
+
+export interface AlterarPerfilUsuarioRequest {
+  perfil_acesso: PerfilAcesso;
+}
+
+export interface AlterarStatusUsuarioRequest {
+  ativo: boolean;
+}
