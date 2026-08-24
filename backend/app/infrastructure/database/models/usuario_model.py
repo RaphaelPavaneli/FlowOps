@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import Boolean, DateTime, Index, String, Unicode, Uuid
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Unicode, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.database.connection import Base
@@ -24,6 +24,12 @@ class UsuarioModel(Base):
     )
     senha_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     perfil_acesso: Mapped[str] = mapped_column(String(30), nullable=False)
+    equipe_id: Mapped[UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("auth.equipes.id", name="fk_auth_usuarios_equipe_id"),
+        nullable=True,
+        index=True,
+    )
     ativo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     criado_em: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

@@ -48,6 +48,7 @@ class SqlUsuarioRepository(UsuarioRepository):
             email=usuario.email,
             senha_hash=usuario.senha_hash,
             perfil_acesso=usuario.perfil_acesso.value,
+            equipe_id=usuario.equipe_id,
             ativo=usuario.ativo,
             criado_em=usuario.criado_em,
             atualizado_em=usuario.atualizado_em,
@@ -72,6 +73,7 @@ class SqlUsuarioRepository(UsuarioRepository):
         modelo.email = usuario.email
         modelo.senha_hash = usuario.senha_hash
         modelo.perfil_acesso = usuario.perfil_acesso.value
+        modelo.equipe_id = usuario.equipe_id
         modelo.ativo = usuario.ativo
         modelo.atualizado_em = usuario.atualizado_em
         self._session.commit()
@@ -86,6 +88,7 @@ class SqlUsuarioRepository(UsuarioRepository):
             email=modelo.email,
             senha_hash=modelo.senha_hash,
             perfil_acesso=PerfilAcesso(modelo.perfil_acesso),
+            equipe_id=modelo.equipe_id,
             ativo=modelo.ativo,
             criado_em=modelo.criado_em,
             atualizado_em=modelo.atualizado_em,

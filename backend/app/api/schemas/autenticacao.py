@@ -40,6 +40,7 @@ class UsuarioResponse(BaseModel):
     nome: str
     email: EmailStr
     perfil_acesso: PerfilAcesso
+    equipe_id: UUID | None
     ativo: bool
 
 

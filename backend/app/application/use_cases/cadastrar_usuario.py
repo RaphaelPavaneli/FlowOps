@@ -31,6 +31,7 @@ class CadastrarUsuario:
             email=email_normalizado,
             senha_hash=self._password_hasher.gerar_hash(senha),
             perfil_acesso=PerfilAcesso.USUARIO,
+            equipe_id=None,
             ativo=True,
             criado_em=agora,
             atualizado_em=agora,
