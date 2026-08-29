@@ -28,7 +28,12 @@ def session_factory() -> Generator[sessionmaker[Session], None, None]:
         "sqlite://",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
-    ).execution_options(schema_translate_map={"auth": None})
+    ).execution_options(
+        schema_translate_map={
+            "auth": None,
+            "operacao": None,
+        }
+    )
     TestSession = sessionmaker(
         bind=engine,
         autoflush=False,

@@ -6,9 +6,11 @@ são controladas exclusivamente pelas migrations Alembic.
 ## Ordem executada
 
 1. `01_create_database.sql`: cria `DB_FLOWOPS` quando necessário.
-2. `python -m alembic upgrade head`: cria `auth.usuarios` e registra a versão.
+2. `python -m alembic upgrade head`: cria e evolui os schemas `auth` e
+   `operacao`, registrando a versão.
 3. `02_create_application_login.sql`: cria `flowops_app`, caso não exista.
-4. `03_grant_application_permissions.sql`: concede permissões mínimas em `auth`.
+4. `03_grant_application_permissions.sql`: concede permissões mínimas em
+   `auth` e `operacao`.
 5. `validate_database.sql`: lista objetos e permissões para conferência.
 
 O script `setup_database.ps1` automatiza essa ordem usando uma conexão
@@ -27,5 +29,7 @@ com o login SQL `flowops_app`.
 O SQL Server precisa estar em modo misto. O script pede a senha sem gravá-la no
 repositório.
 
-O login recebe somente `CONNECT`, `SELECT`, `INSERT`, `UPDATE` e `DELETE` no
-schema `auth`. Ele não recebe `sysadmin`, `db_owner` ou permissão de DDL.
+O script concede somente `CONNECT`, `SELECT`, `INSERT`, `UPDATE` e `DELETE`
+nos schemas `auth` e `operacao`. Ele não concede `sysadmin`, `db_owner` ou
+permissão de DDL, mas também não revoga papéis que já tenham sido atribuídos
+manualmente. Em produção, use um login exclusivo com esse conjunto mínimo.
