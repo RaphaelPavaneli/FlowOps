@@ -7,7 +7,7 @@ import {
   LockKeyhole,
   Mail,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { useAutenticacao } from "../contexts/ContextoAutenticacao";
 import { ErroAutenticacao } from "../services/autenticacao";
@@ -20,13 +20,24 @@ const classesCampoLogin =
 export function FormularioLogin() {
   const { entrar } = useAutenticacao();
   const navegar = useNavigate();
-  const [email, setEmail] = useState("");
+  const localizacao = useLocation();
+  const estadoNavegacao = localizacao.state as {
+    cadastroConcluido?: boolean;
+    email?: string;
+  } | null;
+  const [email, setEmail] = useState(estadoNavegacao?.email ?? "");
   const [senha, setSenha] = useState("");
   const [senhaVisivel, setSenhaVisivel] = useState(false);
   const [carregando, setCarregando] = useState(false);
-  const [mensagem, setMensagem] = useState("");
+  const [mensagem, setMensagem] = useState(
+    estadoNavegacao?.cadastroConcluido
+      ? "Cadastro realizado com sucesso. Entre com sua conta."
+      : "",
+  );
   const [estadoMensagem, setEstadoMensagem] =
-    useState<EstadoMensagem>(null);
+    useState<EstadoMensagem>(
+      estadoNavegacao?.cadastroConcluido ? "sucesso" : null,
+    );
 
   async function enviarFormulario(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -196,6 +207,16 @@ export function FormularioLogin() {
         <LockKeyhole size={14} aria-hidden="true" />
         <span>Seus dados são protegidos e criptografados</span>
       </div>
+
+      <p className="mt-4 mb-0 text-center text-[12.5px] text-[#6f7b8e]">
+        Ainda não possui uma conta?{" "}
+        <Link
+          className="font-bold text-flowops-700 no-underline hover:text-flowops-900 hover:underline hover:underline-offset-[3px]"
+          to="/cadastro"
+        >
+          Cadastre-se
+        </Link>
+      </p>
     </div>
   );
 }

@@ -49,6 +49,12 @@ export function LayoutAutenticado() {
             >
               Dashboard
             </NavLink>
+            <NavLink
+              className={({ isActive }) => obterClasseNavegacao(isActive)}
+              to="/app/automacoes"
+            >
+              Automações
+            </NavLink>
             {administrador && (
               <NavLink
                 className={({ isActive }) => obterClasseNavegacao(isActive)}
