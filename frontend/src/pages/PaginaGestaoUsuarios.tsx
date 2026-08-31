@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
+import { ModalConfirmacao } from "../components/ModalConfirmacao";
 import { useAutenticacao } from "../contexts/ContextoAutenticacao";
 import {
   alterarPerfilUsuario,
@@ -36,6 +37,18 @@ function formatarPerfil(perfil: "administrador" | "usuario") {
   return perfil === "administrador" ? "Administrador" : "Usuário";
 }
 
+type ConfirmacaoUsuarioPendente =
+  | {
+      tipo: "perfil";
+      usuario: UsuarioAdministracao;
+      novoPerfil: PerfilAcesso;
+    }
+  | {
+      tipo: "status";
+      usuario: UsuarioAdministracao;
+      novoStatus: boolean;
+    };
+
 export function PaginaGestaoUsuarios() {
   const { token, usuario: usuarioAutenticado, sair } = useAutenticacao();
   const navegar = useNavigate();
@@ -47,6 +60,8 @@ export function PaginaGestaoUsuarios() {
   const [usuarioEmAlteracaoId, setUsuarioEmAlteracaoId] = useState<string | null>(
     null,
   );
+  const [confirmacaoPendente, setConfirmacaoPendente] =
+    useState<ConfirmacaoUsuarioPendente | null>(null);
   const [mensagemAcao, setMensagemAcao] = useState<{
     tipo: "sucesso" | "erro";
     texto: string;
@@ -140,7 +155,7 @@ export function PaginaGestaoUsuarios() {
     });
   }
 
-  async function confirmarAlteracaoPerfil(usuario: UsuarioAdministracao) {
+  function solicitarAlteracaoPerfil(usuario: UsuarioAdministracao) {
     if (!token) {
       return;
     }
@@ -151,61 +166,53 @@ export function PaginaGestaoUsuarios() {
       return;
     }
 
-    const confirmado = window.confirm(
-      `Deseja alterar o perfil de ${usuario.nome} para ${formatarPerfil(novoPerfil)}?`,
-    );
-    if (!confirmado) {
-      return;
-    }
-
-    setUsuarioEmAlteracaoId(usuario.id);
-    setMensagemAcao(null);
-
-    try {
-      const usuarioAtualizado = await alterarPerfilUsuario(
-        token,
-        usuario.id,
-        novoPerfil,
-      );
-      atualizarUsuarioNaLista(usuarioAtualizado);
-      setMensagemAcao({
-        tipo: "sucesso",
-        texto: `Perfil de ${usuario.nome} alterado com sucesso.`,
-      });
-    } catch (falha) {
-      tratarFalhaAlteracao(falha);
-    } finally {
-      setUsuarioEmAlteracaoId(null);
-    }
+    setConfirmacaoPendente({ tipo: "perfil", usuario, novoPerfil });
   }
 
-  async function confirmarAlteracaoStatus(usuario: UsuarioAdministracao) {
+  function solicitarAlteracaoStatus(usuario: UsuarioAdministracao) {
     if (!token) {
       return;
     }
 
-    const novoStatus = !usuario.ativo;
-    const acao = novoStatus ? "ativar" : "desativar";
-    const confirmado = window.confirm(
-      `Deseja ${acao} a conta de ${usuario.nome}?`,
-    );
-    if (!confirmado) {
+    setConfirmacaoPendente({
+      tipo: "status",
+      usuario,
+      novoStatus: !usuario.ativo,
+    });
+  }
+
+  async function confirmarAcaoUsuario() {
+    if (!token || !confirmacaoPendente) {
       return;
     }
+
+    const acao = confirmacaoPendente;
+    setConfirmacaoPendente(null);
+    const { usuario } = acao;
 
     setUsuarioEmAlteracaoId(usuario.id);
     setMensagemAcao(null);
 
     try {
-      const usuarioAtualizado = await alterarStatusUsuario(
-        token,
-        usuario.id,
-        novoStatus,
-      );
+      const usuarioAtualizado =
+        acao.tipo === "perfil"
+          ? await alterarPerfilUsuario(
+              token,
+              usuario.id,
+              acao.novoPerfil,
+            )
+          : await alterarStatusUsuario(
+              token,
+              usuario.id,
+              acao.novoStatus,
+            );
       atualizarUsuarioNaLista(usuarioAtualizado);
       setMensagemAcao({
         tipo: "sucesso",
-        texto: `Conta de ${usuario.nome} ${novoStatus ? "ativada" : "desativada"} com sucesso.`,
+        texto:
+          acao.tipo === "perfil"
+            ? `Perfil de ${usuario.nome} alterado com sucesso.`
+            : `Conta de ${usuario.nome} ${acao.novoStatus ? "ativada" : "desativada"} com sucesso.`,
       });
     } catch (falha) {
       tratarFalhaAlteracao(falha);
@@ -405,7 +412,7 @@ export function PaginaGestaoUsuarios() {
                           !perfilFoiAlterado ||
                           alteracaoEmAndamento
                         }
-                        onClick={() => void confirmarAlteracaoPerfil(usuario)}
+                        onClick={() => solicitarAlteracaoPerfil(usuario)}
                       >
                         {alterandoEsteUsuario ? (
                           <LoaderCircle
@@ -427,7 +434,7 @@ export function PaginaGestaoUsuarios() {
                         }`}
                         type="button"
                         disabled={propriaConta || alteracaoEmAndamento}
-                        onClick={() => void confirmarAlteracaoStatus(usuario)}
+                        onClick={() => solicitarAlteracaoStatus(usuario)}
                       >
                         {alterandoEsteUsuario ? (
                           <LoaderCircle
@@ -478,6 +485,19 @@ export function PaginaGestaoUsuarios() {
           </>
         )}
       </div>
+
+      <ModalConfirmacao
+        aberto={confirmacaoPendente !== null}
+        mensagem={
+          confirmacaoPendente?.tipo === "perfil"
+            ? `Deseja alterar o perfil de ${confirmacaoPendente.usuario.nome} para ${formatarPerfil(confirmacaoPendente.novoPerfil)}?`
+            : confirmacaoPendente?.tipo === "status"
+              ? `Deseja ${confirmacaoPendente.novoStatus ? "ativar" : "desativar"} a conta de ${confirmacaoPendente.usuario.nome}?`
+              : ""
+        }
+        aoConfirmar={() => void confirmarAcaoUsuario()}
+        aoCancelar={() => setConfirmacaoPendente(null)}
+      />
     </main>
   );
 }

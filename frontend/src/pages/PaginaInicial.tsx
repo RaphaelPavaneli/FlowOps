@@ -66,10 +66,15 @@ export function PaginaInicial() {
             <a className="text-[13.5px] font-semibold text-flowops-cinza no-underline transition-colors duration-150 hover:text-flowops-700" href="#tecnologias">Tecnologias</a>
           </nav>
 
-          <Link className="inline-flex min-h-10 items-center justify-center justify-self-end gap-2 rounded-xl border border-[#cfddf4] bg-white px-3.75 text-[13.5px] font-bold text-flowops-700 no-underline transition-[transform,border-color,background-color] duration-150 hover:-translate-y-px hover:border-[#aac5ef] hover:bg-flowops-50 sm:min-h-11.5 sm:px-5" to="/login">
-            Entrar
-            <ArrowRight size={17} aria-hidden="true" />
-          </Link>
+          <div className="flex items-center justify-self-end gap-2.5">
+            <Link className="hidden min-h-10 items-center justify-center px-2 text-[13px] font-bold text-flowops-700 no-underline hover:text-flowops-900 sm:inline-flex" to="/login">
+              Entrar
+            </Link>
+            <Link className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-flowops-700 px-3.75 text-[13.5px] font-bold text-white no-underline shadow-[0_9px_20px_rgba(37,99,235,0.18)] transition-[transform,box-shadow] duration-150 hover:-translate-y-px hover:shadow-[0_12px_24px_rgba(37,99,235,0.24)] sm:min-h-11.5 sm:px-5" to="/cadastro">
+              Criar conta
+              <ArrowRight size={17} aria-hidden="true" />
+            </Link>
+          </div>
         </div>
       </header>
 
