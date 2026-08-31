@@ -5,8 +5,11 @@ import { LayoutAutenticado } from "./components/LayoutAutenticado";
 import { useAutenticacao } from "./contexts/ContextoAutenticacao";
 import { PaginaAcessoNegado } from "./pages/PaginaAcessoNegado";
 import { PaginaAdministracao } from "./pages/PaginaAdministracao";
+import { PaginaAutomacoes } from "./pages/PaginaAutomacoes";
+import { PaginaCadastro } from "./pages/PaginaCadastro";
 import { PaginaDashboardAdministrativo } from "./pages/PaginaDashboardAdministrativo";
 import { PaginaDashboardOperacional } from "./pages/PaginaDashboardOperacional";
+import { PaginaGestaoEquipes } from "./pages/PaginaGestaoEquipes";
 import { PaginaGestaoUsuarios } from "./pages/PaginaGestaoUsuarios";
 import { PaginaInicial } from "./pages/PaginaInicial";
 import { PaginaLogin } from "./pages/PaginaLogin";
@@ -35,6 +38,16 @@ function App() {
     <Routes>
       <Route path="/" element={<PaginaInicial />} />
       <Route
+        path="/cadastro"
+        element={
+          autenticado ? (
+            <Navigate to="/app/dashboard" replace />
+          ) : (
+            <PaginaCadastro />
+          )
+        }
+      />
+      <Route
         path="/login"
         element={
           autenticado ? (
@@ -57,6 +70,7 @@ function App() {
       >
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<PaginaDashboardOperacional />} />
+        <Route path="automacoes" element={<PaginaAutomacoes />} />
         <Route path="minha-conta" element={<PaginaMinhaConta />} />
         <Route
           path="administracao/dashboard"
@@ -79,6 +93,14 @@ function App() {
           element={
             <RotaProtegida perfisPermitidos={["administrador"]}>
               <PaginaGestaoUsuarios />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="administracao/equipes"
+          element={
+            <RotaProtegida perfisPermitidos={["administrador"]}>
+              <PaginaGestaoEquipes />
             </RotaProtegida>
           }
         />

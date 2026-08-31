@@ -5,6 +5,7 @@ export interface UsuarioAdministracao {
   nome: string;
   email: string;
   perfil_acesso: PerfilAcesso;
+  equipe_id: string | null;
   ativo: boolean;
 }
 

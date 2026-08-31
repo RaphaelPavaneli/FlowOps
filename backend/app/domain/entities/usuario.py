@@ -14,6 +14,7 @@ class Usuario:
     email: str
     senha_hash: str
     perfil_acesso: PerfilAcesso
+    equipe_id: UUID | None
     ativo: bool
     criado_em: datetime
     atualizado_em: datetime

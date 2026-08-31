@@ -5,6 +5,7 @@ import {
   BadgeCheck,
   ChartNoAxesCombined,
   LockKeyhole,
+  Network,
   Settings2,
   UsersRound,
 } from "lucide-react";
@@ -101,6 +102,33 @@ export function PaginaAdministracao() {
               to="/app/administracao/usuarios"
             >
               Acessar usuários
+              <ArrowRight size={17} aria-hidden="true" />
+            </Link>
+          </article>
+
+          <article className="relative rounded-[19px] border border-[#e1e8f2] bg-white/90 p-7 shadow-[0_14px_40px_rgba(30,64,175,0.05)] max-[700px]:p-[23px]">
+            <span
+              className="mb-[22px] grid size-12 place-items-center rounded-[14px] bg-flowops-50 text-flowops-700"
+              aria-hidden="true"
+            >
+              <Network size={23} />
+            </span>
+            <div>
+              <span className="text-[9.5px] font-[750] tracking-[0.08em] text-flowops-700 uppercase">
+                Organização operacional
+              </span>
+              <h2 className="mt-1 mb-0 text-[17px] text-[#283449]">
+                Gestão de equipes
+              </h2>
+              <p className="mt-[7px] mb-0 text-[12.5px] leading-[1.6] text-[#68758a]">
+                Crie equipes e associe os usuários aos seus grupos de trabalho.
+              </p>
+            </div>
+            <Link
+              className="mt-6 inline-flex min-h-[44px] items-center justify-center gap-2 rounded-[11px] bg-[linear-gradient(110deg,#1d4ed8,#3b82f6)] px-[18px] text-[12.5px] font-bold text-white no-underline shadow-[0_10px_22px_rgba(37,99,235,0.18)] transition-[transform,box-shadow] hover:-translate-y-px hover:shadow-[0_13px_27px_rgba(37,99,235,0.25)]"
+              to="/app/administracao/equipes"
+            >
+              Acessar equipes
               <ArrowRight size={17} aria-hidden="true" />
             </Link>
           </article>
