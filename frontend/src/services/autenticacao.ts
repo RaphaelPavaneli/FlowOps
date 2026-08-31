@@ -1,11 +1,20 @@
 import type {
   CredenciaisLogin,
+  DadosCadastro,
   TokenAutenticacao,
   UsuarioAutenticado,
 } from "../types/autenticacao";
 
 interface RespostaErroApi {
-  detail?: string;
+  detail?: unknown;
+}
+
+function obterDetalheErro(erro: RespostaErroApi): string | null {
+  if (typeof erro.detail === "string") {
+    return erro.detail;
+  }
+
+  return null;
 }
 
 export class ErroAutenticacao extends Error {
@@ -38,12 +47,42 @@ export async function autenticar(
   if (!resposta.ok) {
     const erro = (await resposta.json().catch(() => ({}))) as RespostaErroApi;
     throw new ErroAutenticacao(
-      erro.detail ?? "Não foi possível entrar. Verifique os dados informados.",
+      obterDetalheErro(erro) ??
+        "Não foi possível entrar. Verifique os dados informados.",
       resposta.status,
     );
   }
 
   return resposta.json() as Promise<TokenAutenticacao>;
+}
+
+export async function cadastrarUsuario(
+  dados: DadosCadastro,
+): Promise<UsuarioAutenticado> {
+  let resposta: Response;
+
+  try {
+    resposta = await fetch("/api/v1/autenticacao/cadastro", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(dados),
+    });
+  } catch {
+    throw new ErroAutenticacao(
+      "Não foi possível conectar ao servidor. Tente novamente em instantes.",
+    );
+  }
+
+  if (!resposta.ok) {
+    const erro = (await resposta.json().catch(() => ({}))) as RespostaErroApi;
+    throw new ErroAutenticacao(
+      obterDetalheErro(erro) ??
+        "Não foi possível criar sua conta. Verifique os dados informados.",
+      resposta.status,
+    );
+  }
+
+  return resposta.json() as Promise<UsuarioAutenticado>;
 }
 
 export async function obterUsuarioAtual(
@@ -64,7 +103,7 @@ export async function obterUsuarioAtual(
   if (!resposta.ok) {
     const erro = (await resposta.json().catch(() => ({}))) as RespostaErroApi;
     throw new ErroAutenticacao(
-      erro.detail ?? "Sua sessão não é mais válida.",
+      obterDetalheErro(erro) ?? "Sua sessão não é mais válida.",
       resposta.status,
     );
   }
