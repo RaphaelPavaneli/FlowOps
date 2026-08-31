@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Clock3,
   FilePlus2,
   LoaderCircle,
   Plus,
@@ -47,7 +48,7 @@ function formatarData(data: string) {
 }
 
 export function PaginaAutomacoes() {
-  const { token, sair } = useAutenticacao();
+  const { token, usuario, sair } = useAutenticacao();
   const [pagina, setPagina] = useState(1);
   const [resultado, setResultado] = useState<ListaAutomacoesResponse | null>(null);
   const [carregando, setCarregando] = useState(true);
@@ -66,7 +67,10 @@ export function PaginaAutomacoes() {
   }, []);
 
   const carregarAutomacoes = useCallback(async () => {
-    if (!token) {
+    if (!token || !usuario?.equipe_id) {
+      setCarregando(false);
+      setResultado(null);
+      setErro("");
       return;
     }
 
@@ -91,7 +95,7 @@ export function PaginaAutomacoes() {
     } finally {
       setCarregando(false);
     }
-  }, [token, pagina, sair]);
+  }, [token, usuario?.equipe_id, pagina, sair]);
 
   useEffect(() => {
     void carregarAutomacoes();
@@ -110,7 +114,7 @@ export function PaginaAutomacoes() {
   async function enviarFormulario(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
 
-    if (!token || salvando) {
+    if (!token || !usuario?.equipe_id || salvando) {
       return;
     }
 
@@ -163,6 +167,57 @@ export function PaginaAutomacoes() {
   }
 
   const totalPaginas = Math.max(resultado?.total_paginas ?? 1, 1);
+
+  if (usuario?.equipe_id === null) {
+    return (
+      <main className="min-h-[calc(100vh-77px)] bg-[#f7f9fc] max-[700px]:min-h-[calc(100vh-116px)]">
+        <div className="mx-auto w-[calc(100%_-_48px)] max-w-[1160px] py-12 max-[700px]:w-[calc(100%_-_32px)] max-[700px]:py-9">
+          <section className="mb-7">
+            <span className="mb-2.5 block text-[10.5px] font-bold tracking-[0.1em] text-flowops-700 uppercase">
+              Operação
+            </span>
+            <h1 className="m-0 text-[clamp(30px,4vw,42px)] tracking-[-1.4px] text-flowops-texto">
+              Automações
+            </h1>
+            <p className="mt-2.5 mb-0 max-w-[630px] text-[13.5px] leading-[1.65] text-flowops-cinza">
+              As automações ficam disponíveis depois que sua conta entra em uma
+              equipe.
+            </p>
+          </section>
+
+          <section
+            className="flex min-h-[320px] flex-col items-center justify-center gap-3 rounded-[18px] border border-[#eadfbf] bg-white p-8 text-center shadow-[0_14px_38px_rgba(30,64,175,0.04)]"
+            aria-labelledby="titulo-automacoes-sem-equipe"
+          >
+            <span
+              className="grid size-12 place-items-center rounded-[14px] bg-[#fff5d8] text-[#8a6724]"
+              aria-hidden="true"
+            >
+              <Clock3 size={24} />
+            </span>
+            <h2
+              className="m-0 text-[18px] text-flowops-texto"
+              id="titulo-automacoes-sem-equipe"
+            >
+              Aguardando associação a uma equipe
+            </h2>
+            <p className="m-0 max-w-[540px] text-[13px] leading-[1.65] text-flowops-cinza">
+              Sua conta está ativa, mas um administrador precisa vinculá-la a
+              uma equipe antes que as automações compartilhadas sejam liberadas.
+            </p>
+            <button
+              className="mt-2 inline-flex min-h-[42px] cursor-pointer items-center justify-center gap-2 rounded-[10px] border border-[#cfddf4] bg-white px-4 text-[12px] font-bold text-flowops-700 hover:bg-flowops-50"
+              type="button"
+              onClick={() => window.location.reload()}
+            >
+              <RefreshCw size={16} aria-hidden="true" />
+              Atualizar situação
+            </button>
+          </section>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-[calc(100vh-77px)] bg-[#f7f9fc] max-[700px]:min-h-[calc(100vh-116px)]">
