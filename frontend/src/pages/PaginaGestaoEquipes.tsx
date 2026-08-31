@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
+import { ModalConfirmacao } from "../components/ModalConfirmacao";
 import { useAutenticacao } from "../contexts/ContextoAutenticacao";
 import {
   associarUsuarioEquipe,
@@ -49,6 +50,11 @@ export function PaginaGestaoEquipes() {
   const [usuarioEmAssociacaoId, setUsuarioEmAssociacaoId] = useState<
     string | null
   >(null);
+  const [associacaoPendente, setAssociacaoPendente] = useState<{
+    usuario: UsuarioAdministracao;
+    equipeId: string;
+    nomeEquipe: string;
+  } | null>(null);
   const [erro, setErro] = useState("");
   const [mensagemAcao, setMensagemAcao] = useState<{
     tipo: "sucesso" | "erro";
@@ -194,7 +200,7 @@ export function PaginaGestaoEquipes() {
     }));
   }
 
-  async function confirmarAssociacao(usuario: UsuarioAdministracao) {
+  function solicitarAssociacao(usuario: UsuarioAdministracao) {
     if (!token || usuarioEmAssociacaoId) {
       return;
     }
@@ -215,12 +221,20 @@ export function PaginaGestaoEquipes() {
       return;
     }
 
-    const confirmado = window.confirm(
-      `Deseja associar ${usuario.nome} à equipe ${equipe.nome}?`,
-    );
-    if (!confirmado) {
+    setAssociacaoPendente({
+      usuario,
+      equipeId,
+      nomeEquipe: equipe.nome,
+    });
+  }
+
+  async function confirmarAssociacao() {
+    if (!token || !associacaoPendente) {
       return;
     }
+
+    const { usuario, equipeId, nomeEquipe } = associacaoPendente;
+    setAssociacaoPendente(null);
 
     setUsuarioEmAssociacaoId(usuario.id);
     setMensagemAcao(null);
@@ -234,7 +248,7 @@ export function PaginaGestaoEquipes() {
       atualizarUsuarioNaLista(usuarioAtualizado);
       setMensagemAcao({
         tipo: "sucesso",
-        texto: `${usuario.nome} foi associado à equipe ${equipe.nome}.`,
+        texto: `${usuario.nome} foi associado à equipe ${nomeEquipe}.`,
       });
     } catch (falha) {
       if (tratarErroAcesso(falha)) {
@@ -518,7 +532,7 @@ export function PaginaGestaoEquipes() {
                               !associacaoAlterada ||
                               usuarioEmAssociacaoId !== null
                             }
-                            onClick={() => void confirmarAssociacao(usuario)}
+                            onClick={() => solicitarAssociacao(usuario)}
                           >
                             {associandoEsteUsuario ? (
                               <LoaderCircle className="animate-spin" size={14} aria-hidden="true" />
@@ -572,6 +586,17 @@ export function PaginaGestaoEquipes() {
           </>
         )}
       </div>
+
+      <ModalConfirmacao
+        aberto={associacaoPendente !== null}
+        mensagem={
+          associacaoPendente
+            ? `Deseja associar ${associacaoPendente.usuario.nome} à equipe ${associacaoPendente.nomeEquipe}?`
+            : ""
+        }
+        aoConfirmar={() => void confirmarAssociacao()}
+        aoCancelar={() => setAssociacaoPendente(null)}
+      />
     </main>
   );
 }

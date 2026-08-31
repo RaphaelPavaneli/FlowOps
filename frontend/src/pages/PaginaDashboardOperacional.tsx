@@ -125,14 +125,13 @@ export function PaginaDashboardOperacional() {
               evitando números simulados no dashboard.
             </p>
           </div>
-          <button
-            className="col-span-2 mt-1 inline-flex min-h-[46px] w-full cursor-not-allowed items-center justify-center gap-[9px] rounded-xl border border-[#d7e1ef] bg-white/80 px-5 text-[13.5px] font-bold text-[#8793a5] min-[701px]:col-span-1 min-[701px]:mt-0 min-[701px]:w-auto"
-            type="button"
-            disabled
+          <Link
+            className="col-span-2 mt-1 inline-flex min-h-[46px] w-full items-center justify-center gap-[9px] rounded-xl border border-flowops-700 bg-flowops-700 px-5 text-[13.5px] font-bold text-white no-underline transition-colors hover:bg-flowops-800 min-[701px]:col-span-1 min-[701px]:mt-0 min-[701px]:w-auto"
+            to="/app/automacoes"
           >
             <Plus size={18} aria-hidden="true" />
-            Criar automação em breve
-          </button>
+            Criar automação
+          </Link>
         </section>
 
         {administrador && (
