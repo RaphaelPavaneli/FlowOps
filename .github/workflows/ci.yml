@@ -68,3 +68,28 @@ jobs:
 
       - name: Compilar frontend
         run: npm run build
+
+  docker-backend:
+    name: Build Docker backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v7
+
+      - name: Construir imagem do backend
+        run: docker build --tag flowops-backend:ci ./backend
+
+  docker-frontend:
+    name: Build Docker frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v7
+
+      - name: Construir imagem do frontend
+        run: docker build --tag flowops-frontend:ci ./frontend
+        
