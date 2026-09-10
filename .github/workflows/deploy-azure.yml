@@ -1,0 +1,89 @@
+name: Implantação no Azure
+
+on:
+  workflow_run:
+    workflows:
+      - Publicação das imagens Docker
+    types:
+      - completed
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  implantar:
+    name: Implantar no Azure Container Apps
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: producao
+
+    permissions:
+      contents: read
+      id-token: write
+
+    env:
+      GRUPO_RECURSOS: rg-flowops-portifolio
+      APP_BACKEND: flowops-backend
+      APP_FRONTEND: flowops-frontend
+      IMAGEM_BACKEND: ghcr.io/raphaelpavaneli/flowops-backend
+      IMAGEM_FRONTEND: ghcr.io/raphaelpavaneli/flowops-frontend
+      TAG_IMAGEM: sha-${{ github.event.workflow_run.head_sha }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    steps:
+      - name: Autenticar no Azure
+        id: azure_login
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Configurar extensão do Container Apps
+        run: az config set extension.use_dynamic_install=yes_without_prompt
+
+      - name: Implantar backend
+        run: |
+          az containerapp update \
+            --name "$APP_BACKEND" \
+            --resource-group "$GRUPO_RECURSOS" \
+            --image "$IMAGEM_BACKEND:$TAG_IMAGEM" \
+            --output none
+
+      - name: Implantar frontend
+        run: |
+          az containerapp update \
+            --name "$APP_FRONTEND" \
+            --resource-group "$GRUPO_RECURSOS" \
+            --image "$IMAGEM_FRONTEND:$TAG_IMAGEM" \
+            --output none
+
+      - name: Exibir versões implantadas
+        run: |
+          az containerapp show \
+            --name "$APP_BACKEND" \
+            --resource-group "$GRUPO_RECURSOS" \
+            --query "{aplicativo:name,imagem:properties.template.containers[0].image,revisao:properties.latestRevisionName}" \
+            --output table
+
+          az containerapp show \
+            --name "$APP_FRONTEND" \
+            --resource-group "$GRUPO_RECURSOS" \
+            --query "{aplicativo:name,imagem:properties.template.containers[0].image,revisao:properties.latestRevisionName}" \
+            --output table
+
+      - name: Parar aplicativos após o deploy
+        if: always() && steps.azure_login.outcome == 'success'
+        run: |
+          az rest \
+            --method post \
+            --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$GRUPO_RECURSOS/providers/Microsoft.App/containerApps/$APP_BACKEND/stop?api-version=2026-01-01" \
+            --output none
+
+          az rest \
+            --method post \
+            --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$GRUPO_RECURSOS/providers/Microsoft.App/containerApps/$APP_FRONTEND/stop?api-version=2026-01-01" \
+            --output none
