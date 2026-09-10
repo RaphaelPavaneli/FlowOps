@@ -25,6 +25,9 @@ services:
 
     image: flowops-frontend:local
 
+    environment:
+      BACKEND_URL: http://backend:8000
+
     depends_on:
       backend:
         condition: service_healthy
