@@ -4,6 +4,7 @@ from uuid import UUID
 
 from app.domain.enums.status_automacao import StatusAutomacao
 from app.domain.exceptions.automacoes import (
+    AutomacaoIndisponivelParaExecucaoError,
     TransicaoStatusAutomacaoInvalidaError,
 )
 
@@ -46,3 +47,8 @@ class Automacao:
 
         self.status = StatusAutomacao.PAUSADA
         self.atualizada_em = momento
+
+    def garantir_disponivel_para_execucao(self) -> None:
+        """Impede novas execuções quando a automação não está ativa."""
+        if self.status is not StatusAutomacao.ATIVA:
+            raise AutomacaoIndisponivelParaExecucaoError

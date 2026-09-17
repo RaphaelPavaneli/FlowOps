@@ -5,6 +5,7 @@ from app.api.routes import (
     automacoes,
     dashboard,
     equipes,
+    execucoes,
     health,
     usuarios,
 )
@@ -16,4 +17,5 @@ api_router.include_router(autenticacao.router)
 api_router.include_router(usuarios.router)
 api_router.include_router(equipes.router)
 api_router.include_router(automacoes.router)
+api_router.include_router(execucoes.router)
 api_router.include_router(dashboard.router)

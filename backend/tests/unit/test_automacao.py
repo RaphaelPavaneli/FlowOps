@@ -6,6 +6,7 @@ import pytest
 from app.domain.entities.automacao import Automacao
 from app.domain.enums.status_automacao import StatusAutomacao
 from app.domain.exceptions.automacoes import (
+    AutomacaoIndisponivelParaExecucaoError,
     TransicaoStatusAutomacaoInvalidaError,
 )
 
@@ -73,3 +74,22 @@ def test_transicao_invalida_preserva_status_e_data(
 
     assert automacao.status is status_inicial
     assert automacao.atualizada_em == MOMENTO_CRIACAO
+
+
+def test_automacao_ativa_esta_disponivel_para_execucao() -> None:
+    automacao = criar_automacao(StatusAutomacao.ATIVA)
+
+    automacao.garantir_disponivel_para_execucao()
+
+
+@pytest.mark.parametrize(
+    "status",
+    [StatusAutomacao.RASCUNHO, StatusAutomacao.PAUSADA],
+)
+def test_automacao_nao_ativa_impede_nova_execucao(
+    status: StatusAutomacao,
+) -> None:
+    automacao = criar_automacao(status)
+
+    with pytest.raises(AutomacaoIndisponivelParaExecucaoError):
+        automacao.garantir_disponivel_para_execucao()

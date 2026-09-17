@@ -17,6 +17,10 @@ class AutomacaoNaoEncontradaError(Exception):
     """Evita revelar automações ausentes ou pertencentes a outra equipe."""
 
 
+class AutomacaoIndisponivelParaExecucaoError(Exception):
+    """Impede iniciar execuções de automações que não estão ativas."""
+
+
 class TransicaoStatusAutomacaoInvalidaError(Exception):
     """Impede uma transição não permitida no ciclo da automação."""
 
