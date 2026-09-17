@@ -1,10 +1,13 @@
-from uuid import UUID
+from datetime import datetime, timezone
+from uuid import UUID, uuid4
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.infrastructure.database.models.automacao_model import AutomacaoModel
 from app.infrastructure.database.models.equipe_model import EquipeModel
+from app.infrastructure.database.models.execucao_model import ExecucaoModel
 from app.infrastructure.database.models.usuario_model import UsuarioModel
 
 
@@ -116,9 +119,13 @@ def test_automacoes_exigem_autenticacao(client: TestClient) -> None:
         json={"nome": "Automação teste"},
     )
     listagem = client.get("/api/v1/automacoes")
+    ativacao = client.post(f"/api/v1/automacoes/{uuid4()}/ativar")
+    pausa = client.post(f"/api/v1/automacoes/{uuid4()}/pausar")
 
     assert criacao.status_code == 401
     assert listagem.status_code == 401
+    assert ativacao.status_code == 401
+    assert pausa.status_code == 401
 
 
 def test_usuario_sem_equipe_nao_acessa_automacoes(client: TestClient) -> None:
@@ -399,3 +406,212 @@ def test_dados_invalidos_retorna_422(
 
     assert nome_invalido.status_code == 422
     assert descricao_invalida.status_code == 422
+
+
+def test_usuario_ativa_pausa_e_reativa_automacao_da_propria_equipe(
+    client: TestClient,
+    session_factory: sessionmaker[Session],
+) -> None:
+    admin_token = preparar_administrador(client, session_factory)
+    equipe = criar_equipe(client, admin_token, "Equipe Operações")
+    _, token = preparar_usuario_com_equipe(
+        client,
+        admin_token,
+        nome="Usuário",
+        email="usuario@email.com",
+        equipe=equipe,
+    )
+    automacao = criar_automacao(client, token, "Automação controlada")
+
+    ativacao = client.post(
+        f"/api/v1/automacoes/{automacao['id']}/ativar",
+        json={"status": "pausada"},
+        headers=headers(token),
+    )
+    pausa = client.post(
+        f"/api/v1/automacoes/{automacao['id']}/pausar",
+        headers=headers(token),
+    )
+    reativacao = client.post(
+        f"/api/v1/automacoes/{automacao['id']}/ativar",
+        headers=headers(token),
+    )
+
+    assert ativacao.status_code == 200
+    assert ativacao.json()["status"] == "ativa"
+    assert pausa.status_code == 200
+    assert pausa.json()["status"] == "pausada"
+    assert reativacao.status_code == 200
+    assert reativacao.json()["status"] == "ativa"
+
+
+def test_transicoes_invalidas_de_automacao_retornam_409(
+    client: TestClient,
+    session_factory: sessionmaker[Session],
+) -> None:
+    admin_token = preparar_administrador(client, session_factory)
+    equipe = criar_equipe(client, admin_token, "Equipe Operações")
+    _, token = preparar_usuario_com_equipe(
+        client,
+        admin_token,
+        nome="Usuário",
+        email="usuario@email.com",
+        equipe=equipe,
+    )
+    automacao = criar_automacao(client, token, "Automação controlada")
+
+    pausa_em_rascunho = client.post(
+        f"/api/v1/automacoes/{automacao['id']}/pausar",
+        headers=headers(token),
+    )
+    client.post(
+        f"/api/v1/automacoes/{automacao['id']}/ativar",
+        headers=headers(token),
+    )
+    ativacao_repetida = client.post(
+        f"/api/v1/automacoes/{automacao['id']}/ativar",
+        headers=headers(token),
+    )
+
+    assert pausa_em_rascunho.status_code == 409
+    assert pausa_em_rascunho.json()["detail"] == (
+        "Não é possível alterar a automação de 'rascunho' para 'pausada'."
+    )
+    assert ativacao_repetida.status_code == 409
+    assert ativacao_repetida.json()["detail"] == (
+        "Não é possível alterar a automação de 'ativa' para 'ativa'."
+    )
+
+
+def test_usuario_nao_altera_automacao_de_outra_equipe(
+    client: TestClient,
+    session_factory: sessionmaker[Session],
+) -> None:
+    admin_token = preparar_administrador(client, session_factory)
+    equipe_a = criar_equipe(client, admin_token, "Equipe A")
+    equipe_b = criar_equipe(client, admin_token, "Equipe B")
+    _, token_a = preparar_usuario_com_equipe(
+        client,
+        admin_token,
+        nome="Usuário A",
+        email="usuario.a@email.com",
+        equipe=equipe_a,
+    )
+    _, token_b = preparar_usuario_com_equipe(
+        client,
+        admin_token,
+        nome="Usuário B",
+        email="usuario.b@email.com",
+        equipe=equipe_b,
+    )
+    automacao = criar_automacao(client, token_a, "Automação da equipe A")
+
+    response = client.post(
+        f"/api/v1/automacoes/{automacao['id']}/ativar",
+        headers=headers(token_b),
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Automação não encontrada."
+    with session_factory() as session:
+        modelo = session.get(AutomacaoModel, UUID(automacao["id"]))
+        assert modelo is not None
+        assert modelo.status == "rascunho"
+
+
+def test_usuario_sem_equipe_nao_altera_status_de_automacao(
+    client: TestClient,
+) -> None:
+    cadastrar_usuario(client, "Usuário sem equipe", "sem.equipe@email.com")
+    token = obter_token(client, "sem.equipe@email.com")
+
+    response = client.post(
+        f"/api/v1/automacoes/{uuid4()}/ativar",
+        headers=headers(token),
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == (
+        "O usuário precisa estar associado a uma equipe."
+    )
+
+
+def test_equipe_inativa_nao_altera_status_de_automacao(
+    client: TestClient,
+    session_factory: sessionmaker[Session],
+) -> None:
+    admin_token = preparar_administrador(client, session_factory)
+    equipe = criar_equipe(client, admin_token, "Equipe Inativa")
+    _, token = preparar_usuario_com_equipe(
+        client,
+        admin_token,
+        nome="Usuário",
+        email="usuario@email.com",
+        equipe=equipe,
+    )
+    automacao = criar_automacao(client, token, "Automação bloqueada")
+    with session_factory() as session:
+        modelo = session.get(EquipeModel, UUID(equipe["id"]))
+        assert modelo is not None
+        modelo.ativa = False
+        session.commit()
+
+    response = client.post(
+        f"/api/v1/automacoes/{automacao['id']}/ativar",
+        headers=headers(token),
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == (
+        "A equipe do usuário não está disponível."
+    )
+
+
+def test_pausar_automacao_nao_altera_execucao_existente(
+    client: TestClient,
+    session_factory: sessionmaker[Session],
+) -> None:
+    admin_token = preparar_administrador(client, session_factory)
+    equipe = criar_equipe(client, admin_token, "Equipe Operações")
+    usuario, token = preparar_usuario_com_equipe(
+        client,
+        admin_token,
+        nome="Usuário",
+        email="usuario@email.com",
+        equipe=equipe,
+    )
+    automacao = criar_automacao(client, token, "Automação em execução")
+    client.post(
+        f"/api/v1/automacoes/{automacao['id']}/ativar",
+        headers=headers(token),
+    )
+    execucao_id = uuid4()
+    agora = datetime.now(timezone.utc)
+    with session_factory() as session:
+        session.add(
+            ExecucaoModel(
+                id=execucao_id,
+                automacao_id=UUID(automacao["id"]),
+                equipe_id=UUID(equipe["id"]),
+                solicitada_por_usuario_id=UUID(usuario["id"]),
+                status="processando",
+                mensagem_erro=None,
+                criada_em=agora,
+                iniciada_em=agora,
+                finalizada_em=None,
+                atualizada_em=agora,
+            )
+        )
+        session.commit()
+
+    response = client.post(
+        f"/api/v1/automacoes/{automacao['id']}/pausar",
+        headers=headers(token),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "pausada"
+    with session_factory() as session:
+        execucao = session.get(ExecucaoModel, execucao_id)
+        assert execucao is not None
+        assert execucao.status == "processando"

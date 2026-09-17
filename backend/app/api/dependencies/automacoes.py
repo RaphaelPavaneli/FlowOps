@@ -4,6 +4,9 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 
 from app.api.dependencies.equipes import get_equipe_repository
+from app.application.use_cases.alterar_status_automacao import (
+    AlterarStatusAutomacao,
+)
 from app.application.use_cases.criar_automacao import CriarAutomacao
 from app.application.use_cases.listar_automacoes import ListarAutomacoes
 from app.domain.repositories.automacao_repository import AutomacaoRepository
@@ -44,3 +47,19 @@ def get_listar_automacoes(
     ],
 ) -> ListarAutomacoes:
     return ListarAutomacoes(automacao_repository, equipe_repository)
+
+
+def get_alterar_status_automacao(
+    automacao_repository: Annotated[
+        AutomacaoRepository,
+        Depends(get_automacao_repository),
+    ],
+    equipe_repository: Annotated[
+        EquipeRepository,
+        Depends(get_equipe_repository),
+    ],
+) -> AlterarStatusAutomacao:
+    return AlterarStatusAutomacao(
+        automacao_repository,
+        equipe_repository,
+    )

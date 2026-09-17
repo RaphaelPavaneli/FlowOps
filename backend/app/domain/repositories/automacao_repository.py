@@ -16,6 +16,14 @@ class AutomacaoRepository(ABC):
         """Busca uma automação pelo nome único dentro da equipe."""
 
     @abstractmethod
+    def buscar_por_id_e_equipe(
+        self,
+        automacao_id: UUID,
+        equipe_id: UUID,
+    ) -> Automacao | None:
+        """Busca uma automação somente dentro da equipe informada."""
+
+    @abstractmethod
     def listar_por_equipe(
         self,
         equipe_id: UUID,
@@ -31,3 +39,7 @@ class AutomacaoRepository(ABC):
     @abstractmethod
     def salvar(self, automacao: Automacao) -> Automacao:
         """Persiste uma nova automação."""
+
+    @abstractmethod
+    def atualizar(self, automacao: Automacao) -> Automacao | None:
+        """Atualiza uma automação somente dentro da equipe informada."""
