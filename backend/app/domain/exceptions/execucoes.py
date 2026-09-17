@@ -19,3 +19,7 @@ class TransicaoStatusExecucaoInvalidaError(Exception):
 
 class MensagemFalhaExecucaoObrigatoriaError(Exception):
     """Exige uma mensagem útil ao registrar a falha da execução."""
+
+
+class ExecucaoNaoEncontradaError(Exception):
+    """Evita revelar execuções ausentes ou pertencentes a outra equipe."""

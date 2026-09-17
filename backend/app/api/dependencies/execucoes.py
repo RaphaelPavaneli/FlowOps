@@ -5,7 +5,9 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies.automacoes import get_automacao_repository
 from app.api.dependencies.equipes import get_equipe_repository
+from app.application.use_cases.buscar_execucao import BuscarExecucao
 from app.application.use_cases.iniciar_execucao import IniciarExecucao
+from app.application.use_cases.listar_execucoes import ListarExecucoes
 from app.domain.repositories.automacao_repository import AutomacaoRepository
 from app.domain.repositories.equipe_repository import EquipeRepository
 from app.domain.repositories.execucao_repository import ExecucaoRepository
@@ -40,3 +42,37 @@ def get_iniciar_execucao(
         equipe_repository,
         execucao_repository,
     )
+
+
+def get_listar_execucoes(
+    automacao_repository: Annotated[
+        AutomacaoRepository,
+        Depends(get_automacao_repository),
+    ],
+    equipe_repository: Annotated[
+        EquipeRepository,
+        Depends(get_equipe_repository),
+    ],
+    execucao_repository: Annotated[
+        ExecucaoRepository,
+        Depends(get_execucao_repository),
+    ],
+) -> ListarExecucoes:
+    return ListarExecucoes(
+        automacao_repository,
+        equipe_repository,
+        execucao_repository,
+    )
+
+
+def get_buscar_execucao(
+    equipe_repository: Annotated[
+        EquipeRepository,
+        Depends(get_equipe_repository),
+    ],
+    execucao_repository: Annotated[
+        ExecucaoRepository,
+        Depends(get_execucao_repository),
+    ],
+) -> BuscarExecucao:
+    return BuscarExecucao(equipe_repository, execucao_repository)

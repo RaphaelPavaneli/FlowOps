@@ -25,3 +25,11 @@ class ExecucaoResponse(BaseModel):
     iniciada_em: datetime | None
     finalizada_em: datetime | None
     atualizada_em: datetime
+
+
+class ListaExecucoesResponse(BaseModel):
+    execucoes: list[ExecucaoResponse]
+    pagina: int
+    itens_por_pagina: int
+    total: int
+    total_paginas: int
