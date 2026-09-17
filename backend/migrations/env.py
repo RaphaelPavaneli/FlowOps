@@ -5,6 +5,7 @@ from alembic import context
 from sqlalchemy import URL, create_engine, pool
 
 from app.core.config import settings
+from app.infrastructure.database import models as database_models  # noqa: F401
 from app.infrastructure.database.connection import Base, build_database_url
 
 
@@ -53,6 +54,7 @@ def run_migrations_offline() -> None:
         dialect_opts={"paramstyle": "named"},
         compare_type=True,
         include_schemas=True,
+        version_table_schema="dbo",
     )
 
     with context.begin_transaction():
@@ -71,6 +73,7 @@ def run_migrations_online() -> None:
             target_metadata=target_metadata,
             compare_type=True,
             include_schemas=True,
+            version_table_schema="dbo",
         )
 
         with context.begin_transaction():

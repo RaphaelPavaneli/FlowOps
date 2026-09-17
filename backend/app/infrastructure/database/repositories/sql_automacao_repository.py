@@ -30,6 +30,19 @@ class SqlAutomacaoRepository(AutomacaoRepository):
         )
         return self._para_entidade(modelo) if modelo else None
 
+    def buscar_por_id_e_equipe(
+        self,
+        automacao_id: UUID,
+        equipe_id: UUID,
+    ) -> Automacao | None:
+        modelo = self._session.scalar(
+            select(AutomacaoModel).where(
+                AutomacaoModel.id == automacao_id,
+                AutomacaoModel.equipe_id == equipe_id,
+            )
+        )
+        return self._para_entidade(modelo) if modelo else None
+
     def listar_por_equipe(
         self,
         equipe_id: UUID,
@@ -74,6 +87,22 @@ class SqlAutomacaoRepository(AutomacaoRepository):
             self._session.rollback()
             raise AutomacaoNomeDuplicadoError from erro
 
+        self._session.refresh(modelo)
+        return self._para_entidade(modelo)
+
+    def atualizar(self, automacao: Automacao) -> Automacao | None:
+        modelo = self._session.scalar(
+            select(AutomacaoModel).where(
+                AutomacaoModel.id == automacao.id,
+                AutomacaoModel.equipe_id == automacao.equipe_id,
+            )
+        )
+        if modelo is None:
+            return None
+
+        modelo.status = automacao.status.value
+        modelo.atualizada_em = automacao.atualizada_em
+        self._session.commit()
         self._session.refresh(modelo)
         return self._para_entidade(modelo)
 

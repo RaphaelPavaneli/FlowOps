@@ -7,8 +7,10 @@ O FlowOps foi criado como um projeto de portfólio para praticar desenvolvimento
 web moderno, integração entre frontend e backend, autenticação, autorização,
 persistência no SQL Server, migrations e testes automatizados.
 
-> **Status:** MVP funcional para execução local. Nesta versão, o sistema
-> organiza o catálogo de automações; ele ainda não executa processos externos.
+> **Status:** MVP funcional, containerizado e com pipeline automatizado de
+> integração, publicação de imagens e deploy no Azure Container Apps. Nesta
+> versão, o sistema organiza o catálogo de automações; ele ainda não executa
+> processos externos.
 
 ## Sumário
 
@@ -26,6 +28,7 @@ persistência no SQL Server, migrations e testes automatizados.
 - [Endpoints principais](#endpoints-principais)
 - [Como demonstrar o projeto](#como-demonstrar-o-projeto)
 - [Testes](#testes)
+- [Entrega e implantação](#entrega-e-implantação)
 - [Segurança](#segurança)
 - [Limitações do MVP](#limitações-do-mvp)
 - [Roadmap](#roadmap)
@@ -133,6 +136,14 @@ administração por empresa estão documentados no roadmap.
 - Microsoft ODBC Driver 18 for SQL Server.
 - Schemas `auth` e `operacao`.
 
+### DevOps e cloud
+
+- Docker e Docker Compose.
+- GitHub Actions.
+- GitHub Container Registry (GHCR).
+- Azure Container Apps.
+- OpenID Connect (OIDC) para autenticação do GitHub no Azure.
+
 ## Arquitetura
 
 O backend separa regras de negócio, casos de uso, HTTP e infraestrutura. O
@@ -178,6 +189,7 @@ equipe.
 
 ```text
 FlowOps/
+├── .github/workflows/           # CI, publicação de imagens e deploy
 ├── backend/
 │   ├── .scripts/database/       # Bootstrap e validação do SQL Server
 │   ├── app/
@@ -187,7 +199,8 @@ FlowOps/
 │   │   ├── domain/              # Regras e contratos
 │   │   └── infrastructure/      # Banco, repositórios e segurança
 │   ├── migrations/              # Evolução do banco com Alembic
-│   └── tests/                   # Testes unitários e de integração
+│   ├── tests/                   # Testes unitários e de integração
+│   └── Dockerfile               # Imagem da API
 ├── frontend/
 │   ├── src/
 │   │   ├── components/          # Componentes reutilizáveis
@@ -195,7 +208,9 @@ FlowOps/
 │   │   ├── pages/               # Páginas da aplicação
 │   │   ├── services/            # Clientes HTTP
 │   │   └── types/               # Contratos TypeScript
-│   └── vite.config.ts           # Vite, Tailwind e proxy da API
+│   ├── vite.config.ts           # Vite, Tailwind e proxy da API
+│   └── Dockerfile               # Build e servidor do frontend
+├── compose.yaml                 # Orquestração do ambiente local
 └── README.md
 ```
 
@@ -410,10 +425,41 @@ A suíte cobre, entre outros cenários:
 - Usuário sem equipe e equipe inativa.
 - Isolamento das automações entre equipes.
 - Nome duplicado e paginação.
+- Estados e transições das automações e execuções.
+- Criação, histórico e detalhes das execuções.
+- Isolamento das execuções entre equipes.
 
 Os testes comuns utilizam SQLite em memória com dependências substituídas. Eles
 validam as regras e a integração HTTP, mas não comprovam o comportamento
 específico do SQL Server, ODBC ou das migrations.
+
+Para validar somente o motor de execuções:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\unit\test_execucao.py tests\unit\test_automacao.py -v
+.\.venv\Scripts\python.exe -m pytest tests\integration\test_sql_execucao_repository.py tests\integration\test_execucoes.py -v
+```
+
+As evidências devem ser interpretadas por camada:
+
+| Evidência | Comprova | Não comprova |
+| --- | --- | --- |
+| Testes unitários | Estados, transições e validações puras | API e banco real |
+| Integração SQLite | Rotas, repositórios, paginação e isolamento | ODBC e comportamento específico do SQL Server |
+| Inspeção da migration | Estrutura declarada para o banco | Aplicação real da estrutura |
+| `alembic current` | Revisão registrada no banco conectado | Integridade de todos os objetos |
+| `validate_database.sql` | Tabelas, índices, restrições e permissões no SQL Server | Fluxo HTTP completo |
+
+A revisão atual esperada no SQL Server é `20260914_01`. O script
+`backend/.scripts/database/validate_database.sql` realiza consultas de
+validação sem criar registros de negócio. Já `alembic upgrade head` altera o
+schema e deve ser executado somente após confirmar o ambiente de destino.
+
+A fonte oficial da revisão é `dbo.alembic_version`. O projeto configura esse
+schema explicitamente para que contas com schemas padrão diferentes não criem
+históricos concorrentes. Se outra tabela `alembic_version` for encontrada, ela
+deve ser tratada como divergência e preservada até a reconciliação segura do
+banco.
 
 ### Frontend
 
@@ -424,6 +470,33 @@ npm.cmd run build
 
 Esse comando executa a verificação TypeScript e gera o bundle de produção com
 Vite.
+
+## Entrega e implantação
+
+O projeto possui uma esteira automatizada no GitHub Actions:
+
+```mermaid
+flowchart LR
+    PR[Push ou Pull Request] --> CI[Testes e builds]
+    CI --> DOCKER[Build das imagens Docker]
+    DOCKER --> GHCR[Publicação versionada no GHCR]
+    GHCR --> AZURE[Deploy no Azure Container Apps]
+```
+
+O fluxo executa:
+
+1. Testes do backend com Python 3.11 e Pytest.
+2. Verificação TypeScript e build de produção do frontend.
+3. Build das imagens Docker do backend e do frontend.
+4. Publicação no GHCR com as tags `latest` e `sha-<commit>`.
+5. Atualização dos dois aplicativos no Azure Container Apps com a imagem exata
+   aprovada pela esteira.
+
+A autenticação entre GitHub Actions e Azure utiliza OIDC, evitando uma credencial
+de acesso permanente no workflow. Depois da implantação, os Container Apps são
+interrompidos automaticamente para manter o laboratório compatível com o
+controle de custos. Por isso, a demonstração pública precisa ser iniciada de
+forma planejada antes de ser apresentada.
 
 ## Segurança
 
@@ -451,7 +524,7 @@ Práticas aplicadas no MVP:
 - Não existe recuperação de senha ou verificação de e-mail.
 - Não há envio de convites.
 - Não há uma entidade separada para empresa ou organização.
-- Não há deploy público documentado.
+- A demonstração no Azure possui disponibilidade controlada para reduzir custos.
 - Testes automatizados não substituem a validação manual no SQL Server e no
   navegador.
 
@@ -468,9 +541,8 @@ Melhorias possíveis depois da entrega do MVP:
 - Histórico de execuções e notificações.
 - Recuperação de senha e verificação de e-mail.
 - Testes de componentes no frontend.
-- Pipeline de integração contínua.
-- Containers para simplificar o ambiente local.
-- Deploy de demonstração.
+- Execução real de automações com processamento assíncrono.
+- Disponibilização planejada de uma demonstração pública.
 - Logs estruturados e observabilidade.
 
 ## Aprendizados demonstrados
@@ -489,6 +561,9 @@ O FlowOps reúne práticas relevantes para desenvolvimento full-stack:
 - Testes automatizados de regras e endpoints.
 - Tratamento consistente de erros e estados de interface.
 - Git, branches, commits e Pull Requests durante a evolução do projeto.
+- Docker e Docker Compose para ambientes reproduzíveis.
+- CI/CD com GitHub Actions, imagens versionadas no GHCR e deploy no Azure.
+- Autenticação OIDC entre GitHub Actions e Azure.
 
 ---
 

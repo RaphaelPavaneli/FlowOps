@@ -1,10 +1,12 @@
 from math import ceil
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.api.dependencies.autenticacao import get_usuario_atual
 from app.api.dependencies.automacoes import (
+    get_alterar_status_automacao,
     get_criar_automacao,
     get_listar_automacoes,
 )
@@ -13,12 +15,17 @@ from app.api.schemas.automacoes import (
     CriarAutomacaoRequest,
     ListaAutomacoesResponse,
 )
+from app.application.use_cases.alterar_status_automacao import (
+    AlterarStatusAutomacao,
+)
 from app.application.use_cases.criar_automacao import CriarAutomacao
 from app.application.use_cases.listar_automacoes import ListarAutomacoes
 from app.domain.entities.usuario import Usuario
 from app.domain.exceptions.automacoes import (
+    AutomacaoNaoEncontradaError,
     AutomacaoNomeDuplicadoError,
     EquipeUsuarioIndisponivelError,
+    TransicaoStatusAutomacaoInvalidaError,
     UsuarioSemEquipeError,
 )
 
@@ -84,6 +91,70 @@ def listar_automacoes(
         itens_por_pagina=resultado.itens_por_pagina,
         total=resultado.total,
         total_paginas=ceil(resultado.total / resultado.itens_por_pagina),
+    )
+
+
+@router.post(
+    "/{automacao_id}/ativar",
+    response_model=AutomacaoResponse,
+    summary="Ativar automação",
+)
+def ativar_automacao(
+    automacao_id: UUID,
+    usuario: Annotated[Usuario, Depends(get_usuario_atual)],
+    caso_de_uso: Annotated[
+        AlterarStatusAutomacao,
+        Depends(get_alterar_status_automacao),
+    ],
+) -> AutomacaoResponse:
+    try:
+        automacao = caso_de_uso.ativar(usuario, automacao_id)
+    except AutomacaoNaoEncontradaError as erro:
+        raise _automacao_nao_encontrada() from erro
+    except TransicaoStatusAutomacaoInvalidaError as erro:
+        raise _transicao_status_invalida(erro) from erro
+    except (UsuarioSemEquipeError, EquipeUsuarioIndisponivelError) as erro:
+        raise _erro_contexto_equipe(erro) from erro
+    return AutomacaoResponse.model_validate(automacao)
+
+
+@router.post(
+    "/{automacao_id}/pausar",
+    response_model=AutomacaoResponse,
+    summary="Pausar automação",
+)
+def pausar_automacao(
+    automacao_id: UUID,
+    usuario: Annotated[Usuario, Depends(get_usuario_atual)],
+    caso_de_uso: Annotated[
+        AlterarStatusAutomacao,
+        Depends(get_alterar_status_automacao),
+    ],
+) -> AutomacaoResponse:
+    try:
+        automacao = caso_de_uso.pausar(usuario, automacao_id)
+    except AutomacaoNaoEncontradaError as erro:
+        raise _automacao_nao_encontrada() from erro
+    except TransicaoStatusAutomacaoInvalidaError as erro:
+        raise _transicao_status_invalida(erro) from erro
+    except (UsuarioSemEquipeError, EquipeUsuarioIndisponivelError) as erro:
+        raise _erro_contexto_equipe(erro) from erro
+    return AutomacaoResponse.model_validate(automacao)
+
+
+def _automacao_nao_encontrada() -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Automação não encontrada.",
+    )
+
+
+def _transicao_status_invalida(
+    erro: TransicaoStatusAutomacaoInvalidaError,
+) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail=str(erro),
     )
 
 
