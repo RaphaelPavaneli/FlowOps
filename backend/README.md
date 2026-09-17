@@ -125,3 +125,41 @@ python -m pytest
 Os testes comuns utilizam SQLite em memória e não alteram `DB_FLOWOPS`. A
 conexão SQL Server e as migrations são validadas separadamente durante o
 bootstrap do ambiente.
+
+### Evidências do motor de execuções
+
+Execute separadamente as regras de domínio:
+
+```powershell
+python -m pytest tests/unit/test_execucao.py tests/unit/test_automacao.py -v
+```
+
+Execute a persistência e os contratos HTTP:
+
+```powershell
+python -m pytest tests/integration/test_sql_execucao_repository.py tests/integration/test_execucoes.py -v
+```
+
+Esses testes comprovam estados, transições, criação, histórico, detalhes,
+paginação e isolamento entre equipes usando SQLite em memória. Eles não
+comprovam ODBC, tipos específicos do SQL Server nem a aplicação real das
+migrations.
+
+No ambiente SQL Server, confira primeiro a revisão sem alterar o banco:
+
+```powershell
+python -m alembic current
+python -m alembic heads
+```
+
+A revisão esperada é `20260914_01`. O script
+`.scripts/database/validate_database.sql` verifica a tabela
+`operacao.execucoes`, seus índices, restrição de status, chaves estrangeiras e
+a revisão do Alembic. O comando `alembic upgrade head` altera o banco e deve ser
+executado somente no ambiente correto e com aprovação.
+
+O Alembic mantém sua revisão exclusivamente em `dbo.alembic_version`. Essa
+localização é declarada no `migrations/env.py` para não depender do schema
+padrão do usuário que abre a conexão. Uma tabela `alembic_version` encontrada
+em outro schema representa uma divergência histórica e não deve ser apagada ou
+sincronizada antes de conferir todos os objetos do banco.

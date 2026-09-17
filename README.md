@@ -425,10 +425,41 @@ A suíte cobre, entre outros cenários:
 - Usuário sem equipe e equipe inativa.
 - Isolamento das automações entre equipes.
 - Nome duplicado e paginação.
+- Estados e transições das automações e execuções.
+- Criação, histórico e detalhes das execuções.
+- Isolamento das execuções entre equipes.
 
 Os testes comuns utilizam SQLite em memória com dependências substituídas. Eles
 validam as regras e a integração HTTP, mas não comprovam o comportamento
 específico do SQL Server, ODBC ou das migrations.
+
+Para validar somente o motor de execuções:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\unit\test_execucao.py tests\unit\test_automacao.py -v
+.\.venv\Scripts\python.exe -m pytest tests\integration\test_sql_execucao_repository.py tests\integration\test_execucoes.py -v
+```
+
+As evidências devem ser interpretadas por camada:
+
+| Evidência | Comprova | Não comprova |
+| --- | --- | --- |
+| Testes unitários | Estados, transições e validações puras | API e banco real |
+| Integração SQLite | Rotas, repositórios, paginação e isolamento | ODBC e comportamento específico do SQL Server |
+| Inspeção da migration | Estrutura declarada para o banco | Aplicação real da estrutura |
+| `alembic current` | Revisão registrada no banco conectado | Integridade de todos os objetos |
+| `validate_database.sql` | Tabelas, índices, restrições e permissões no SQL Server | Fluxo HTTP completo |
+
+A revisão atual esperada no SQL Server é `20260914_01`. O script
+`backend/.scripts/database/validate_database.sql` realiza consultas de
+validação sem criar registros de negócio. Já `alembic upgrade head` altera o
+schema e deve ser executado somente após confirmar o ambiente de destino.
+
+A fonte oficial da revisão é `dbo.alembic_version`. O projeto configura esse
+schema explicitamente para que contas com schemas padrão diferentes não criem
+históricos concorrentes. Se outra tabela `alembic_version` for encontrada, ela
+deve ser tratada como divergência e preservada até a reconciliação segura do
+banco.
 
 ### Frontend
 

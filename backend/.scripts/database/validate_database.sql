@@ -35,6 +35,11 @@ BEGIN
     THROW 51017, N'A tabela operacao.automacoes não foi encontrada.', 1;
 END;
 
+IF OBJECT_ID(N'operacao.execucoes', N'U') IS NULL
+BEGIN
+    THROW 51020, N'A tabela operacao.execucoes não foi encontrada.', 1;
+END;
+
 IF NOT EXISTS (
     SELECT 1
     FROM sys.indexes
@@ -54,10 +59,10 @@ END;
 IF NOT EXISTS (
     SELECT 1
     FROM dbo.alembic_version
-    WHERE version_num = N'20260825_01'
+    WHERE version_num = N'20260914_01'
 )
 BEGIN
-    THROW 51018, N'O banco não está na revisão Alembic 20260825_01.', 1;
+    THROW 51018, N'O banco não está na revisão Alembic 20260914_01.', 1;
 END;
 
 IF NOT EXISTS (
@@ -69,6 +74,50 @@ IF NOT EXISTS (
 )
 BEGIN
     THROW 51019, N'O índice único de automações por equipe não foi encontrado.', 1;
+END;
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'operacao.execucoes')
+        AND name = N'ix_operacao_execucoes_equipe_automacao_criada_em'
+)
+BEGIN
+    THROW 51021, N'O índice do histórico de execuções não foi encontrado.', 1;
+END;
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'operacao.execucoes')
+        AND name = N'ix_operacao_execucoes_equipe_status_criada_em'
+)
+BEGIN
+    THROW 51022, N'O índice de status das execuções não foi encontrado.', 1;
+END;
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.check_constraints
+    WHERE parent_object_id = OBJECT_ID(N'operacao.execucoes')
+        AND name = N'ck_operacao_execucoes_status'
+)
+BEGIN
+    THROW 51023, N'A restrição de status das execuções não foi encontrada.', 1;
+END;
+
+IF (
+    SELECT COUNT(*)
+    FROM sys.foreign_keys
+    WHERE parent_object_id = OBJECT_ID(N'operacao.execucoes')
+        AND name IN (
+            N'fk_operacao_execucoes_automacao_id',
+            N'fk_operacao_execucoes_equipe_id',
+            N'fk_operacao_execucoes_solicitante_id'
+        )
+) <> 3
+BEGIN
+    THROW 51024, N'As chaves estrangeiras das execuções estão incompletas.', 1;
 END;
 
 SELECT
@@ -93,7 +142,8 @@ FROM sys.indexes AS i
 WHERE i.object_id IN (
     OBJECT_ID(N'auth.usuarios'),
     OBJECT_ID(N'auth.equipes'),
-    OBJECT_ID(N'operacao.automacoes')
+    OBJECT_ID(N'operacao.automacoes'),
+    OBJECT_ID(N'operacao.execucoes')
 )
     AND i.name IS NOT NULL
 ORDER BY OBJECT_NAME(i.object_id), i.name;
