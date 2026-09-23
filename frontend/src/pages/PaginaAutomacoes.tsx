@@ -7,6 +7,8 @@ import {
   Clock3,
   FilePlus2,
   LoaderCircle,
+  Pause,
+  Play,
   Plus,
   RefreshCw,
   Workflow,
@@ -14,12 +16,16 @@ import {
 } from "lucide-react";
 
 import { useAutenticacao } from "../contexts/ContextoAutenticacao";
+import { ModalConfirmacao } from "../components/ModalConfirmacao";
 import {
+  ativarAutomacao,
   criarAutomacao,
   ErroAutomacoes,
   listarAutomacoes,
+  pausarAutomacao,
 } from "../services/automacoes";
 import type {
+  Automacao,
   ListaAutomacoesResponse,
   StatusAutomacao,
 } from "../types/automacoes";
@@ -57,6 +63,11 @@ export function PaginaAutomacoes() {
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const [alterandoStatusId, setAlterandoStatusId] = useState<string | null>(null);
+  const [confirmacaoStatus, setConfirmacaoStatus] = useState<{
+    automacao: Automacao;
+    acao: "ativar" | "pausar";
+  } | null>(null);
   const [mensagemAcao, setMensagemAcao] = useState<{
     tipo: "sucesso" | "erro";
     texto: string;
@@ -163,6 +174,59 @@ export function PaginaAutomacoes() {
       });
     } finally {
       setSalvando(false);
+    }
+  }
+
+  async function confirmarAlteracaoStatus() {
+    if (!token || !confirmacaoStatus || alterandoStatusId) {
+      return;
+    }
+
+    const { automacao, acao } = confirmacaoStatus;
+    setConfirmacaoStatus(null);
+    setAlterandoStatusId(automacao.id);
+    setMensagemAcao(null);
+
+    try {
+      const automacaoAtualizada =
+        acao === "ativar"
+          ? await ativarAutomacao(token, automacao.id)
+          : await pausarAutomacao(token, automacao.id);
+
+      setResultado((atual) =>
+        atual
+          ? {
+              ...atual,
+              automacoes: atual.automacoes.map((item) =>
+                item.id === automacaoAtualizada.id
+                  ? automacaoAtualizada
+                  : item,
+              ),
+            }
+          : atual,
+      );
+      setMensagemAcao({
+        tipo: "sucesso",
+        texto:
+          acao === "ativar"
+            ? "Automação ativada com sucesso."
+            : "Automação pausada com sucesso.",
+      });
+    } catch (falha) {
+      if (falha instanceof ErroAutomacoes && falha.status === 401) {
+        sair();
+        return;
+      }
+
+      setMensagemAcao({
+        tipo: "erro",
+        texto:
+          falha instanceof ErroAutomacoes
+            ? falha.message
+            : "Ocorreu um erro inesperado ao alterar a automação.",
+      });
+    } finally {
+      setAlterandoStatusId(null);
     }
   }
 
@@ -350,6 +414,15 @@ export function PaginaAutomacoes() {
           </div>
         )}
 
+        {!formularioAberto && mensagemAcao?.tipo === "erro" && (
+          <div
+            className="mb-5 rounded-[12px] border border-[#ecd8d6] bg-[#fff7f6] px-4 py-3 text-[12.5px] font-semibold text-[#8f3029]"
+            role="alert"
+          >
+            {mensagemAcao.texto}
+          </div>
+        )}
+
         {carregando && (
           <section
             className="flex min-h-[300px] flex-col items-center justify-center gap-3 rounded-[18px] border border-[#e0e7f1] bg-white text-center text-flowops-cinza"
@@ -409,16 +482,17 @@ export function PaginaAutomacoes() {
               className="overflow-hidden rounded-[18px] border border-[#dfe7f1] bg-white shadow-[0_14px_38px_rgba(30,64,175,0.05)]"
               aria-label="Automações da equipe"
             >
-              <div className="hidden grid-cols-[minmax(0,1.6fr)_minmax(120px,0.55fr)_minmax(160px,0.65fr)] gap-5 border-b border-[#e7ecf3] bg-[#f8fafd] px-6 py-3.5 text-[10px] font-bold tracking-[0.07em] text-[#7a8799] uppercase min-[701px]:grid">
+              <div className="hidden grid-cols-[minmax(0,1.6fr)_minmax(110px,0.5fr)_minmax(145px,0.6fr)_minmax(130px,0.55fr)] gap-5 border-b border-[#e7ecf3] bg-[#f8fafd] px-6 py-3.5 text-[10px] font-bold tracking-[0.07em] text-[#7a8799] uppercase min-[701px]:grid">
                 <span>Automação</span>
                 <span>Status</span>
                 <span>Criada em</span>
+                <span>Ações</span>
               </div>
 
               <ul className="m-0 list-none p-0">
                 {resultado.automacoes.map((automacao) => (
                   <li
-                    className="grid gap-4 border-b border-[#edf1f6] px-5 py-5 last:border-b-0 min-[701px]:grid-cols-[minmax(0,1.6fr)_minmax(120px,0.55fr)_minmax(160px,0.65fr)] min-[701px]:items-center min-[701px]:gap-5 min-[701px]:px-6"
+                    className="grid gap-4 border-b border-[#edf1f6] px-5 py-5 last:border-b-0 min-[701px]:grid-cols-[minmax(0,1.6fr)_minmax(110px,0.5fr)_minmax(145px,0.6fr)_minmax(130px,0.55fr)] min-[701px]:items-center min-[701px]:gap-5 min-[701px]:px-6"
                     key={automacao.id}
                   >
                     <div className="min-w-0">
@@ -449,6 +523,43 @@ export function PaginaAutomacoes() {
                         <CalendarDays size={14} aria-hidden="true" />
                         {formatarData(automacao.criada_em)}
                       </span>
+                    </div>
+
+                    <div>
+                      <span className="mb-1.5 block text-[10px] font-bold tracking-[0.05em] text-[#7a8799] uppercase min-[701px]:sr-only">
+                        Ações
+                      </span>
+                      <button
+                        className="inline-flex min-h-9 min-w-[104px] cursor-pointer items-center justify-center gap-1.5 rounded-[9px] border border-[#cfddf4] bg-white px-3 text-[11px] font-bold text-flowops-700 transition-colors hover:bg-flowops-50 disabled:cursor-not-allowed disabled:opacity-55"
+                        type="button"
+                        disabled={alterandoStatusId !== null}
+                        onClick={() =>
+                          setConfirmacaoStatus({
+                            automacao,
+                            acao:
+                              automacao.status === "ativa"
+                                ? "pausar"
+                                : "ativar",
+                          })
+                        }
+                      >
+                        {alterandoStatusId === automacao.id ? (
+                          <LoaderCircle
+                            className="animate-spin"
+                            size={14}
+                            aria-hidden="true"
+                          />
+                        ) : automacao.status === "ativa" ? (
+                          <Pause size={14} aria-hidden="true" />
+                        ) : (
+                          <Play size={14} aria-hidden="true" />
+                        )}
+                        {alterandoStatusId === automacao.id
+                          ? "Salvando..."
+                          : automacao.status === "ativa"
+                            ? "Pausar"
+                            : "Ativar"}
+                      </button>
                     </div>
                   </li>
                 ))}
@@ -487,6 +598,26 @@ export function PaginaAutomacoes() {
           </>
         )}
       </div>
+
+      <ModalConfirmacao
+        aberto={confirmacaoStatus !== null}
+        titulo={
+          confirmacaoStatus?.acao === "pausar"
+            ? "Pausar automação"
+            : "Ativar automação"
+        }
+        mensagem={
+          confirmacaoStatus?.acao === "pausar"
+            ? `Deseja pausar “${confirmacaoStatus.automacao.nome}”? Novas execuções ficarão bloqueadas.`
+            : `Deseja ativar “${confirmacaoStatus?.automacao.nome ?? ""}”? Ela ficará disponível para novas execuções.`
+        }
+        textoConfirmar={
+          confirmacaoStatus?.acao === "pausar" ? "Pausar" : "Ativar"
+        }
+        textoCancelar="Cancelar"
+        aoConfirmar={() => void confirmarAlteracaoStatus()}
+        aoCancelar={() => setConfirmacaoStatus(null)}
+      />
     </main>
   );
 }
