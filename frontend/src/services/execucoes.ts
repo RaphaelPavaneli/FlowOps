@@ -81,6 +81,32 @@ export async function listarExecucoes(
   return resposta.json() as Promise<ListaExecucoesResponse>;
 }
 
+export async function buscarExecucao(
+  token: string,
+  execucaoId: string,
+): Promise<Execucao> {
+  let resposta: Response;
+
+  try {
+    resposta = await fetch(`/api/v1/execucoes/${execucaoId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch {
+    throw new ErroExecucoes(
+      "Não foi possível carregar os detalhes. Verifique sua conexão.",
+    );
+  }
+
+  if (!resposta.ok) {
+    throw await criarErroExecucoes(
+      resposta,
+      "Não foi possível carregar os detalhes da execução.",
+    );
+  }
+
+  return resposta.json() as Promise<Execucao>;
+}
+
 async function criarErroExecucoes(
   resposta: Response,
   mensagemPadrao: string,

@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Clock3,
   History,
+  Search,
   RefreshCw,
 } from "lucide-react";
 import { Link, useLocation, useParams } from "react-router-dom";
@@ -186,17 +187,18 @@ export function PaginaHistoricoExecucoes() {
               className="overflow-hidden rounded-[18px] border border-[#dfe7f1] bg-white shadow-[0_14px_38px_rgba(30,64,175,0.05)]"
               aria-label="Histórico de execuções"
             >
-              <div className="hidden grid-cols-[minmax(180px,1fr)_minmax(110px,0.45fr)_minmax(150px,0.65fr)_minmax(150px,0.65fr)] gap-5 border-b border-[#e7ecf3] bg-[#f8fafd] px-6 py-3.5 text-[10px] font-bold tracking-[0.07em] text-[#7a8799] uppercase min-[701px]:grid">
+              <div className="hidden grid-cols-[minmax(170px,1fr)_minmax(105px,0.42fr)_minmax(145px,0.62fr)_minmax(145px,0.62fr)_minmax(105px,0.4fr)] gap-5 border-b border-[#e7ecf3] bg-[#f8fafd] px-6 py-3.5 text-[10px] font-bold tracking-[0.07em] text-[#7a8799] uppercase min-[701px]:grid">
                 <span>Execução</span>
                 <span>Status</span>
                 <span>Solicitada em</span>
                 <span>Finalizada em</span>
+                <span>Ações</span>
               </div>
 
               <ul className="m-0 list-none p-0">
                 {resultado.execucoes.map((execucao) => (
                   <li
-                    className="grid gap-4 border-b border-[#edf1f6] px-5 py-5 last:border-b-0 min-[701px]:grid-cols-[minmax(180px,1fr)_minmax(110px,0.45fr)_minmax(150px,0.65fr)_minmax(150px,0.65fr)] min-[701px]:items-center min-[701px]:gap-5 min-[701px]:px-6"
+                    className="grid gap-4 border-b border-[#edf1f6] px-5 py-5 last:border-b-0 min-[701px]:grid-cols-[minmax(170px,1fr)_minmax(105px,0.42fr)_minmax(145px,0.62fr)_minmax(145px,0.62fr)_minmax(105px,0.4fr)] min-[701px]:items-center min-[701px]:gap-5 min-[701px]:px-6"
                     key={execucao.id}
                   >
                     <div className="min-w-0">
@@ -235,6 +237,20 @@ export function PaginaHistoricoExecucoes() {
                         <Clock3 size={14} aria-hidden="true" />
                         {formatarData(execucao.finalizada_em)}
                       </span>
+                    </div>
+
+                    <div>
+                      <span className="mb-1.5 block text-[10px] font-bold tracking-[0.05em] text-[#7a8799] uppercase min-[701px]:sr-only">
+                        Ações
+                      </span>
+                      <Link
+                        className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-[9px] border border-[#cfddf4] bg-white px-3 text-[11px] font-bold text-flowops-700 no-underline transition-colors hover:bg-flowops-50"
+                        to={`/app/execucoes/${execucao.id}`}
+                        state={{ automacaoNome: nomeAutomacao }}
+                      >
+                        <Search size={14} aria-hidden="true" />
+                        Detalhes
+                      </Link>
                     </div>
                   </li>
                 ))}
