@@ -191,7 +191,7 @@ export function PaginaHistoricoExecucoes() {
                 <span>Execução</span>
                 <span>Status</span>
                 <span>Solicitada em</span>
-                <span>Finalizada em</span>
+                <span>Processamento</span>
                 <span>Ações</span>
               </div>
 
@@ -208,6 +208,14 @@ export function PaginaHistoricoExecucoes() {
                       <strong className="block truncate font-mono text-[11.5px] text-[#344055]" title={execucao.id}>
                         {execucao.id}
                       </strong>
+                      {execucao.mensagem_erro && (
+                        <p
+                          className="mt-2 mb-0 truncate text-[10.5px] font-semibold text-[#9f312b]"
+                          title={execucao.mensagem_erro}
+                        >
+                          Falha: {execucao.mensagem_erro}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -231,12 +239,18 @@ export function PaginaHistoricoExecucoes() {
 
                     <div>
                       <span className="mb-1.5 block text-[10px] font-bold tracking-[0.05em] text-[#7a8799] uppercase min-[701px]:sr-only">
-                        Finalizada em
+                        Processamento
                       </span>
-                      <span className="inline-flex items-center gap-1.5 text-[11.5px] text-[#667388]">
-                        <Clock3 size={14} aria-hidden="true" />
-                        {formatarData(execucao.finalizada_em)}
-                      </span>
+                      <div className="grid gap-1.5 text-[11px] text-[#667388]">
+                        <span className="inline-flex items-center gap-1.5">
+                          <CalendarClock size={14} aria-hidden="true" />
+                          Início: {formatarData(execucao.iniciada_em)}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <Clock3 size={14} aria-hidden="true" />
+                          Fim: {formatarData(execucao.finalizada_em)}
+                        </span>
+                      </div>
                     </div>
 
                     <div>

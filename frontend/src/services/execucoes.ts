@@ -4,7 +4,11 @@ import type {
 } from "../types/execucoes";
 
 interface RespostaErroApi {
-  detail?: string;
+  detail?: unknown;
+}
+
+function obterDetalheErro(erro: RespostaErroApi): string | null {
+  return typeof erro.detail === "string" ? erro.detail : null;
 }
 
 export class ErroExecucoes extends Error {
@@ -112,5 +116,8 @@ async function criarErroExecucoes(
   mensagemPadrao: string,
 ): Promise<ErroExecucoes> {
   const erro = (await resposta.json().catch(() => ({}))) as RespostaErroApi;
-  return new ErroExecucoes(erro.detail ?? mensagemPadrao, resposta.status);
+  return new ErroExecucoes(
+    obterDetalheErro(erro) ?? mensagemPadrao,
+    resposta.status,
+  );
 }

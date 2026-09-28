@@ -519,8 +519,10 @@ Práticas aplicadas no MVP:
 
 - A associação do usuário à equipe é manual e administrativa.
 - O perfil `administrador` é global dentro desta versão do projeto.
-- O sistema registra automações, mas não executa integrações externas.
-- Status de automação ainda não possui fluxo de alteração na interface.
+- O sistema registra execuções como pendentes, mas ainda não possui worker para
+  processar integrações externas.
+- A interface permite ativar e pausar automações, mas ainda não oferece edição
+  ou arquivamento.
 - Não existe recuperação de senha ou verificação de e-mail.
 - Não há envio de convites.
 - Não há uma entidade separada para empresa ou organização.
@@ -537,8 +539,8 @@ Melhorias possíveis depois da entrega do MVP:
 
 - Convites seguros para associação automática a equipes.
 - Entidade Empresa com administradores limitados ao próprio contexto.
-- Edição, ativação, pausa e arquivamento de automações.
-- Histórico de execuções e notificações.
+- Edição e arquivamento de automações.
+- Notificações e filtros avançados no histórico de execuções.
 - Recuperação de senha e verificação de e-mail.
 - Testes de componentes no frontend.
 - Execução real de automações com processamento assíncrono.

@@ -5,7 +5,11 @@ import type {
 } from "../types/automacoes";
 
 interface RespostaErroApi {
-  detail?: string;
+  detail?: unknown;
+}
+
+function obterDetalheErro(erro: RespostaErroApi): string | null {
+  return typeof erro.detail === "string" ? erro.detail : null;
 }
 
 export class ErroAutomacoes extends Error {
@@ -128,5 +132,8 @@ async function criarErroAutomacoes(
   mensagemPadrao: string,
 ): Promise<ErroAutomacoes> {
   const erro = (await resposta.json().catch(() => ({}))) as RespostaErroApi;
-  return new ErroAutomacoes(erro.detail ?? mensagemPadrao, resposta.status);
+  return new ErroAutomacoes(
+    obterDetalheErro(erro) ?? mensagemPadrao,
+    resposta.status,
+  );
 }
