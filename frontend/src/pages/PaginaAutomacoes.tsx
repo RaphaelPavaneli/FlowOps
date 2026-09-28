@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Clock3,
   FilePlus2,
+  History,
   LoaderCircle,
   Pause,
   Play,
@@ -14,6 +15,7 @@ import {
   Workflow,
   X,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 import { useAutenticacao } from "../contexts/ContextoAutenticacao";
 import { ModalConfirmacao } from "../components/ModalConfirmacao";
@@ -608,6 +610,15 @@ export function PaginaAutomacoes() {
                         Ações
                       </span>
                       <div className="flex flex-wrap gap-2">
+                        <Link
+                          className="inline-flex min-h-9 min-w-[104px] items-center justify-center gap-1.5 rounded-[9px] border border-[#cfddf4] bg-white px-3 text-[11px] font-bold text-flowops-700 no-underline transition-colors hover:bg-flowops-50"
+                          to={`/app/automacoes/${automacao.id}/execucoes`}
+                          state={{ automacaoNome: automacao.nome }}
+                        >
+                          <History size={14} aria-hidden="true" />
+                          Histórico
+                        </Link>
+
                         {automacao.status === "ativa" && (
                           <button
                             className="inline-flex min-h-9 min-w-[104px] cursor-pointer items-center justify-center gap-1.5 rounded-[9px] border border-flowops-700 bg-flowops-700 px-3 text-[11px] font-bold text-white transition-colors hover:bg-flowops-800 disabled:cursor-not-allowed disabled:opacity-55"

@@ -11,6 +11,7 @@ import { PaginaDashboardAdministrativo } from "./pages/PaginaDashboardAdministra
 import { PaginaDashboardOperacional } from "./pages/PaginaDashboardOperacional";
 import { PaginaGestaoEquipes } from "./pages/PaginaGestaoEquipes";
 import { PaginaGestaoUsuarios } from "./pages/PaginaGestaoUsuarios";
+import { PaginaHistoricoExecucoes } from "./pages/PaginaHistoricoExecucoes";
 import { PaginaInicial } from "./pages/PaginaInicial";
 import { PaginaLogin } from "./pages/PaginaLogin";
 import { PaginaMinhaConta } from "./pages/PaginaMinhaConta";
@@ -71,6 +72,10 @@ function App() {
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<PaginaDashboardOperacional />} />
         <Route path="automacoes" element={<PaginaAutomacoes />} />
+        <Route
+          path="automacoes/:automacaoId/execucoes"
+          element={<PaginaHistoricoExecucoes />}
+        />
         <Route path="minha-conta" element={<PaginaMinhaConta />} />
         <Route
           path="administracao/dashboard"

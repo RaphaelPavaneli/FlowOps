@@ -16,3 +16,11 @@ export interface Execucao {
   finalizada_em: string | null;
   atualizada_em: string;
 }
+
+export interface ListaExecucoesResponse {
+  execucoes: Execucao[];
+  pagina: number;
+  itens_por_pagina: number;
+  total: number;
+  total_paginas: number;
+}
