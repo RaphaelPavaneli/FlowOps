@@ -5,7 +5,11 @@ import type {
 } from "../types/automacoes";
 
 interface RespostaErroApi {
-  detail?: string;
+  detail?: unknown;
+}
+
+function obterDetalheErro(erro: RespostaErroApi): string | null {
+  return typeof erro.detail === "string" ? erro.detail : null;
 }
 
 export class ErroAutomacoes extends Error {
@@ -81,10 +85,55 @@ export async function criarAutomacao(
   return resposta.json() as Promise<Automacao>;
 }
 
+export function ativarAutomacao(
+  token: string,
+  automacaoId: string,
+): Promise<Automacao> {
+  return alterarStatusAutomacao(token, automacaoId, "ativar");
+}
+
+export function pausarAutomacao(
+  token: string,
+  automacaoId: string,
+): Promise<Automacao> {
+  return alterarStatusAutomacao(token, automacaoId, "pausar");
+}
+
+async function alterarStatusAutomacao(
+  token: string,
+  automacaoId: string,
+  acao: "ativar" | "pausar",
+): Promise<Automacao> {
+  let resposta: Response;
+
+  try {
+    resposta = await fetch(`/api/v1/automacoes/${automacaoId}/${acao}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch {
+    throw new ErroAutomacoes(
+      `Não foi possível ${acao} a automação. Verifique sua conexão.`,
+    );
+  }
+
+  if (!resposta.ok) {
+    throw await criarErroAutomacoes(
+      resposta,
+      `Não foi possível ${acao} a automação.`,
+    );
+  }
+
+  return resposta.json() as Promise<Automacao>;
+}
+
 async function criarErroAutomacoes(
   resposta: Response,
   mensagemPadrao: string,
 ): Promise<ErroAutomacoes> {
   const erro = (await resposta.json().catch(() => ({}))) as RespostaErroApi;
-  return new ErroAutomacoes(erro.detail ?? mensagemPadrao, resposta.status);
+  return new ErroAutomacoes(
+    obterDetalheErro(erro) ?? mensagemPadrao,
+    resposta.status,
+  );
 }

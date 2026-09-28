@@ -9,8 +9,10 @@ import { PaginaAutomacoes } from "./pages/PaginaAutomacoes";
 import { PaginaCadastro } from "./pages/PaginaCadastro";
 import { PaginaDashboardAdministrativo } from "./pages/PaginaDashboardAdministrativo";
 import { PaginaDashboardOperacional } from "./pages/PaginaDashboardOperacional";
+import { PaginaDetalhesExecucao } from "./pages/PaginaDetalhesExecucao";
 import { PaginaGestaoEquipes } from "./pages/PaginaGestaoEquipes";
 import { PaginaGestaoUsuarios } from "./pages/PaginaGestaoUsuarios";
+import { PaginaHistoricoExecucoes } from "./pages/PaginaHistoricoExecucoes";
 import { PaginaInicial } from "./pages/PaginaInicial";
 import { PaginaLogin } from "./pages/PaginaLogin";
 import { PaginaMinhaConta } from "./pages/PaginaMinhaConta";
@@ -71,6 +73,14 @@ function App() {
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<PaginaDashboardOperacional />} />
         <Route path="automacoes" element={<PaginaAutomacoes />} />
+        <Route
+          path="automacoes/:automacaoId/execucoes"
+          element={<PaginaHistoricoExecucoes />}
+        />
+        <Route
+          path="execucoes/:execucaoId"
+          element={<PaginaDetalhesExecucao />}
+        />
         <Route path="minha-conta" element={<PaginaMinhaConta />} />
         <Route
           path="administracao/dashboard"
