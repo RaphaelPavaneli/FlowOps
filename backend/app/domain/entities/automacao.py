@@ -2,10 +2,14 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
+from app.domain.enums.tipo_acao_automacao import TipoAcaoAutomacao
 from app.domain.enums.status_automacao import StatusAutomacao
 from app.domain.exceptions.automacoes import (
     AutomacaoIndisponivelParaExecucaoError,
     TransicaoStatusAutomacaoInvalidaError,
+)
+from app.domain.value_objects.configuracao_teste_controlado import (
+    ConfiguracaoTesteControlado,
 )
 
 
@@ -19,6 +23,8 @@ class Automacao:
     nome: str
     nome_normalizado: str
     descricao: str | None
+    tipo_acao: TipoAcaoAutomacao
+    configuracao_acao: ConfiguracaoTesteControlado
     status: StatusAutomacao
     criada_em: datetime
     atualizada_em: datetime

@@ -24,6 +24,10 @@ class AutomacaoModel(Base):
             "status IN ('rascunho', 'ativa', 'pausada')",
             name="ck_operacao_automacoes_status",
         ),
+        CheckConstraint(
+            "tipo_acao IN ('teste_controlado')",
+            name="ck_operacao_automacoes_tipo_acao",
+        ),
         Index(
             "uq_operacao_automacoes_equipe_nome",
             "equipe_id",
@@ -68,6 +72,11 @@ class AutomacaoModel(Base):
     descricao: Mapped[str | None] = mapped_column(
         Unicode(500),
         nullable=True,
+    )
+    tipo_acao: Mapped[str] = mapped_column(String(50), nullable=False)
+    configuracao_acao: Mapped[str] = mapped_column(
+        Unicode(500),
+        nullable=False,
     )
     status: Mapped[str] = mapped_column(String(20), nullable=False)
     criada_em: Mapped[datetime] = mapped_column(

@@ -5,11 +5,14 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.api.dependencies.execucoes import get_executor_automacao
+from app.domain.entities.automacao import Automacao
 from app.infrastructure.database.models.equipe_model import EquipeModel
 from app.infrastructure.database.models.usuario_model import UsuarioModel
 from app.infrastructure.database.repositories.sql_execucao_repository import (
     SqlExecucaoRepository,
 )
+from app.main import app
 
 
 SENHA_TESTE = "uma senha longa e segura"
@@ -86,10 +89,18 @@ def preparar_usuario_com_equipe(
     return usuario, obter_token(client, email)
 
 
-def criar_automacao(client: TestClient, token: str, nome: str) -> dict:
+def criar_automacao(
+    client: TestClient,
+    token: str,
+    nome: str,
+    resultado: str = "sucesso",
+) -> dict:
     response = client.post(
         "/api/v1/automacoes",
-        json={"nome": nome},
+        json={
+            "nome": nome,
+            "configuracao_acao": {"resultado": resultado},
+        },
         headers=headers(token),
     )
     assert response.status_code == 201
@@ -134,7 +145,7 @@ def test_inicio_de_execucao_exige_autenticacao(client: TestClient) -> None:
     assert response.status_code == 401
 
 
-def test_usuario_inicia_execucao_pendente_da_automacao_ativa(
+def test_usuario_executa_automacao_ativa_com_sucesso(
     client: TestClient,
     session_factory: sessionmaker[Session],
 ) -> None:
@@ -153,10 +164,10 @@ def test_usuario_inicia_execucao_pendente_da_automacao_ativa(
     assert dados["automacao_id"] == automacao["id"]
     assert dados["equipe_id"] == equipe["id"]
     assert dados["solicitada_por_usuario_id"] == usuario["id"]
-    assert dados["status"] == "pendente"
+    assert dados["status"] == "concluida"
     assert dados["mensagem_erro"] is None
-    assert dados["iniciada_em"] is None
-    assert dados["finalizada_em"] is None
+    assert dados["iniciada_em"] is not None
+    assert dados["finalizada_em"] is not None
 
     with session_factory() as session:
         repositorio = SqlExecucaoRepository(session)
@@ -166,7 +177,82 @@ def test_usuario_inicia_execucao_pendente_da_automacao_ativa(
         )
 
     assert execucao is not None
-    assert execucao.status.value == "pendente"
+    assert execucao.status.value == "concluida"
+    assert execucao.iniciada_em is not None
+    assert execucao.finalizada_em is not None
+
+
+def test_usuario_executa_automacao_com_falha_controlada(
+    client: TestClient,
+    session_factory: sessionmaker[Session],
+) -> None:
+    admin_token = preparar_administrador(client, session_factory)
+    equipe = criar_equipe(client, admin_token, "Equipe Operações")
+    usuario, token = preparar_usuario_com_equipe(
+        client,
+        admin_token,
+        nome="Usuário executor",
+        email="executor@email.com",
+        equipe=equipe,
+    )
+    automacao = criar_automacao(
+        client,
+        token,
+        "Automação com falha",
+        resultado="falha",
+    )
+    ativar_automacao(client, token, automacao["id"])
+
+    response = client.post(
+        f"/api/v1/automacoes/{automacao['id']}/execucoes",
+        headers=headers(token),
+    )
+
+    assert response.status_code == 201
+    dados = response.json()
+    assert dados["equipe_id"] == equipe["id"]
+    assert dados["solicitada_por_usuario_id"] == usuario["id"]
+    assert dados["status"] == "falhou"
+    assert dados["mensagem_erro"] == (
+        "A automação de teste foi configurada para simular uma falha."
+    )
+    assert dados["iniciada_em"] is not None
+    assert dados["finalizada_em"] is not None
+
+
+def test_falha_inesperada_do_executor_e_registrada_sem_expor_detalhes(
+    client: TestClient,
+    session_factory: sessionmaker[Session],
+) -> None:
+    class ExecutorComFalhaInesperada:
+        def executar(self, automacao: Automacao) -> None:
+            raise RuntimeError("detalhe interno sensível")
+
+    app.dependency_overrides[get_executor_automacao] = (
+        lambda: ExecutorComFalhaInesperada()
+    )
+    _, _, automacao, token = preparar_automacao_ativa(
+        client,
+        session_factory,
+    )
+
+    try:
+        response = client.post(
+            f"/api/v1/automacoes/{automacao['id']}/execucoes",
+            headers=headers(token),
+        )
+    finally:
+        app.dependency_overrides.pop(get_executor_automacao, None)
+
+    assert response.status_code == 201
+    dados = response.json()
+    assert dados["status"] == "falhou"
+    assert dados["mensagem_erro"] == (
+        "Não foi possível concluir a execução da automação."
+    )
+    assert "sensível" not in dados["mensagem_erro"]
+    assert dados["iniciada_em"] is not None
+    assert dados["finalizada_em"] is not None
 
 
 @pytest.mark.parametrize("status", ["rascunho", "pausada"])
@@ -394,10 +480,10 @@ def test_usuario_consulta_detalhes_da_execucao_da_propria_equipe(
     assert dados["automacao_id"] == automacao["id"]
     assert dados["equipe_id"] == equipe["id"]
     assert dados["solicitada_por_usuario_id"] == usuario["id"]
-    assert dados["status"] == "pendente"
+    assert dados["status"] == "concluida"
     assert dados["mensagem_erro"] is None
-    assert dados["iniciada_em"] is None
-    assert dados["finalizada_em"] is None
+    assert dados["iniciada_em"] is not None
+    assert dados["finalizada_em"] is not None
 
 
 def test_historico_e_detalhes_nao_vazam_entre_equipes(

@@ -5,10 +5,20 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.domain.enums.status_automacao import StatusAutomacao
+from app.domain.enums.resultado_teste_controlado import (
+    ResultadoTesteControlado,
+)
+from app.domain.enums.tipo_acao_automacao import TipoAcaoAutomacao
 
 
 NomeAutomacao = Annotated[str, Field(min_length=2, max_length=120)]
 DescricaoAutomacao = Annotated[str | None, Field(max_length=500)]
+
+
+class ConfiguracaoTesteControladoSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+    resultado: ResultadoTesteControlado = ResultadoTesteControlado.SUCESSO
 
 
 class CriarAutomacaoRequest(BaseModel):
@@ -16,6 +26,10 @@ class CriarAutomacaoRequest(BaseModel):
 
     nome: NomeAutomacao
     descricao: DescricaoAutomacao = None
+    tipo_acao: TipoAcaoAutomacao = TipoAcaoAutomacao.TESTE_CONTROLADO
+    configuracao_acao: ConfiguracaoTesteControladoSchema = Field(
+        default_factory=ConfiguracaoTesteControladoSchema
+    )
 
     @field_validator("nome")
     @classmethod
@@ -41,6 +55,8 @@ class AutomacaoResponse(BaseModel):
     criada_por_usuario_id: UUID
     nome: str
     descricao: str | None
+    tipo_acao: TipoAcaoAutomacao
+    configuracao_acao: ConfiguracaoTesteControladoSchema
     status: StatusAutomacao
     criada_em: datetime
     atualizada_em: datetime

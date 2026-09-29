@@ -7,9 +7,16 @@ from app.application.services.contexto_equipe import (
 from app.domain.entities.automacao import Automacao
 from app.domain.entities.usuario import Usuario
 from app.domain.enums.status_automacao import StatusAutomacao
+from app.domain.enums.resultado_teste_controlado import (
+    ResultadoTesteControlado,
+)
+from app.domain.enums.tipo_acao_automacao import TipoAcaoAutomacao
 from app.domain.exceptions.automacoes import AutomacaoNomeDuplicadoError
 from app.domain.repositories.automacao_repository import AutomacaoRepository
 from app.domain.repositories.equipe_repository import EquipeRepository
+from app.domain.value_objects.configuracao_teste_controlado import (
+    ConfiguracaoTesteControlado,
+)
 
 
 class CriarAutomacao:
@@ -28,6 +35,8 @@ class CriarAutomacao:
         usuario: Usuario,
         nome: str,
         descricao: str | None,
+        tipo_acao: TipoAcaoAutomacao,
+        resultado_teste: ResultadoTesteControlado,
     ) -> Automacao:
         equipe = obter_equipe_ativa_do_usuario(
             usuario,
@@ -50,6 +59,10 @@ class CriarAutomacao:
             nome=nome_limpo,
             nome_normalizado=nome_normalizado,
             descricao=descricao_limpa or None,
+            tipo_acao=tipo_acao,
+            configuracao_acao=ConfiguracaoTesteControlado(
+                resultado=resultado_teste,
+            ),
             status=StatusAutomacao.RASCUNHO,
             criada_em=agora,
             atualizada_em=agora,

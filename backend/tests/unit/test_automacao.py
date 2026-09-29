@@ -5,9 +5,16 @@ import pytest
 
 from app.domain.entities.automacao import Automacao
 from app.domain.enums.status_automacao import StatusAutomacao
+from app.domain.enums.resultado_teste_controlado import (
+    ResultadoTesteControlado,
+)
+from app.domain.enums.tipo_acao_automacao import TipoAcaoAutomacao
 from app.domain.exceptions.automacoes import (
     AutomacaoIndisponivelParaExecucaoError,
     TransicaoStatusAutomacaoInvalidaError,
+)
+from app.domain.value_objects.configuracao_teste_controlado import (
+    ConfiguracaoTesteControlado,
 )
 
 
@@ -25,6 +32,10 @@ def criar_automacao(
         nome="Automação teste",
         nome_normalizado="automação teste",
         descricao=None,
+        tipo_acao=TipoAcaoAutomacao.TESTE_CONTROLADO,
+        configuracao_acao=ConfiguracaoTesteControlado(
+            resultado=ResultadoTesteControlado.SUCESSO,
+        ),
         status=status,
         criada_em=MOMENTO_CRIACAO,
         atualizada_em=MOMENTO_CRIACAO,

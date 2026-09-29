@@ -175,7 +175,70 @@ def test_usuario_cria_automacao_em_rascunho_na_propria_equipe(
     assert dados["criada_por_usuario_id"] == usuario["id"]
     assert dados["nome"] == "Enviar relatório diário"
     assert dados["descricao"] == "Relatório financeiro"
+    assert dados["tipo_acao"] == "teste_controlado"
+    assert dados["configuracao_acao"] == {"resultado": "sucesso"}
     assert dados["status"] == "rascunho"
+
+    with session_factory() as session:
+        modelo = session.get(AutomacaoModel, UUID(dados["id"]))
+
+    assert modelo is not None
+    assert modelo.tipo_acao == "teste_controlado"
+    assert modelo.configuracao_acao == '{"resultado": "sucesso"}'
+
+
+def test_usuario_configura_automacao_para_falha_controlada(
+    client: TestClient,
+    session_factory: sessionmaker[Session],
+) -> None:
+    admin_token = preparar_administrador(client, session_factory)
+    equipe = criar_equipe(client, admin_token, "Equipe Operações")
+    _, token = preparar_usuario_com_equipe(
+        client,
+        admin_token,
+        nome="Usuário criador",
+        email="criador@email.com",
+        equipe=equipe,
+    )
+
+    response = client.post(
+        "/api/v1/automacoes",
+        json={
+            "nome": "Simular falha",
+            "tipo_acao": "teste_controlado",
+            "configuracao_acao": {"resultado": "falha"},
+        },
+        headers=headers(token),
+    )
+
+    assert response.status_code == 201
+    assert response.json()["configuracao_acao"] == {"resultado": "falha"}
+
+
+def test_configuracao_controlada_invalida_retorna_422(
+    client: TestClient,
+    session_factory: sessionmaker[Session],
+) -> None:
+    admin_token = preparar_administrador(client, session_factory)
+    equipe = criar_equipe(client, admin_token, "Equipe Operações")
+    _, token = preparar_usuario_com_equipe(
+        client,
+        admin_token,
+        nome="Usuário criador",
+        email="criador@email.com",
+        equipe=equipe,
+    )
+
+    response = client.post(
+        "/api/v1/automacoes",
+        json={
+            "nome": "Configuração inválida",
+            "configuracao_acao": {"resultado": "resultado_inexistente"},
+        },
+        headers=headers(token),
+    )
+
+    assert response.status_code == 422
 
 
 def test_cliente_nao_pode_escolher_equipe_criador_ou_status(
