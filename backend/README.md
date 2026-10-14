@@ -95,6 +95,18 @@ Também é possível abrir `run.py` no VS Code e usar **Run Python File**.
 - Swagger UI: `http://127.0.0.1:8000/docs`
 - Health check: `http://127.0.0.1:8000/api/v1/health`
 
+## Execuções assíncronas
+
+- `POST /api/v1/automacoes/{id}/execucoes` responde `202` e registra `pendente`.
+- Um despachante local processa cada execução em thread e subprocesso próprios.
+- O cenário controlado dura 60 segundos e termina como `concluida` ou `falhou`.
+- Uma automação aceita somente uma execução `pendente` ou `processando`; outras
+  automações continuam independentes.
+- `POST /api/v1/execucoes/{id}/cancelar` encerra somente o processo selecionado
+  e registra `cancelada` no histórico.
+- Na inicialização, registros órfãos em estado ativo são finalizados como falha
+  de interrupção. Este desenho é para uma única instância da API.
+
 ## Autenticação
 
 - `POST /api/v1/autenticacao/cadastro`: cria um usuário comum.
@@ -131,7 +143,7 @@ bootstrap do ambiente.
 Execute separadamente as regras de domínio:
 
 ```powershell
-python -m pytest tests/unit/test_execucao.py tests/unit/test_automacao.py -v
+python -m pytest tests/unit/test_execucao.py tests/unit/test_iniciar_execucao.py tests/unit/test_processar_execucao.py tests/unit/test_cancelar_execucao.py tests/unit/test_executor_teste_controlado.py -v
 ```
 
 Execute a persistência e os contratos HTTP:
@@ -141,7 +153,8 @@ python -m pytest tests/integration/test_sql_execucao_repository.py tests/integra
 ```
 
 Esses testes comprovam estados, transições, criação, histórico, detalhes,
-paginação e isolamento entre equipes usando SQLite em memória. Eles não
+paginação, exclusividade, cancelamento e isolamento usando SQLite em memória.
+Eles não
 comprovam ODBC, tipos específicos do SQL Server nem a aplicação real das
 migrations.
 
@@ -152,7 +165,7 @@ python -m alembic current
 python -m alembic heads
 ```
 
-A revisão esperada é `20260914_01`. O script
+A revisão esperada é `20261002_01`. O script
 `.scripts/database/validate_database.sql` verifica a tabela
 `operacao.execucoes`, seus índices, restrição de status, chaves estrangeiras e
 a revisão do Alembic. O comando `alembic upgrade head` altera o banco e deve ser
