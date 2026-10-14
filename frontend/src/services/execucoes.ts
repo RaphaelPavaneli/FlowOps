@@ -111,6 +111,33 @@ export async function buscarExecucao(
   return resposta.json() as Promise<Execucao>;
 }
 
+export async function cancelarExecucao(
+  token: string,
+  execucaoId: string,
+): Promise<Execucao> {
+  let resposta: Response;
+
+  try {
+    resposta = await fetch(`/api/v1/execucoes/${execucaoId}/cancelar`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch {
+    throw new ErroExecucoes(
+      "Não foi possível cancelar a execução. Verifique sua conexão.",
+    );
+  }
+
+  if (!resposta.ok) {
+    throw await criarErroExecucoes(
+      resposta,
+      "Não foi possível cancelar a execução.",
+    );
+  }
+
+  return resposta.json() as Promise<Execucao>;
+}
+
 async function criarErroExecucoes(
   resposta: Response,
   mensagemPadrao: string,

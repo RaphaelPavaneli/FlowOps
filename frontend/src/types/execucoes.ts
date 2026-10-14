@@ -2,7 +2,8 @@ export type StatusExecucao =
   | "pendente"
   | "processando"
   | "concluida"
-  | "falhou";
+  | "falhou"
+  | "cancelada";
 
 export interface Execucao {
   id: string;
