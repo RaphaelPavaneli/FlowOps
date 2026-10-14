@@ -20,6 +20,8 @@ import type {
 } from "../types/execucoes";
 
 const ITENS_POR_PAGINA = 20;
+const INTERVALO_ATUALIZACAO_MS = 3000;
+const statusAtivos: StatusExecucao[] = ["pendente", "processando"];
 const classesBotaoPaginacao =
   "inline-flex min-h-10 items-center justify-center gap-1.5 rounded-[10px] border border-[#d6e0ee] bg-white px-3.5 text-[12px] font-bold text-[#526077] transition-colors enabled:cursor-pointer enabled:hover:border-[#adc4e8] enabled:hover:bg-flowops-50 enabled:hover:text-flowops-700 disabled:cursor-not-allowed disabled:opacity-45";
 
@@ -28,6 +30,7 @@ const rotulosStatus: Record<StatusExecucao, string> = {
   processando: "Processando",
   concluida: "Concluída",
   falhou: "Falhou",
+  cancelada: "Cancelada",
 };
 
 const classesStatus: Record<StatusExecucao, string> = {
@@ -35,6 +38,7 @@ const classesStatus: Record<StatusExecucao, string> = {
   processando: "bg-[#eff6ff] text-[#275ea8]",
   concluida: "bg-[#ecfdf3] text-[#237a45]",
   falhou: "bg-[#fff1f0] text-[#9f312b]",
+  cancelada: "bg-[#f2f5f9] text-[#657287]",
 };
 
 function formatarData(data: string | null) {
@@ -68,7 +72,7 @@ export function PaginaHistoricoExecucoes() {
     document.title = "Histórico de execuções | FlowOps";
   }, []);
 
-  const carregarHistorico = useCallback(async () => {
+  const carregarHistorico = useCallback(async (silencioso = false) => {
     if (!token || !automacaoId) {
       setCarregando(false);
       setResultado(null);
@@ -76,37 +80,58 @@ export function PaginaHistoricoExecucoes() {
       return;
     }
 
-    setCarregando(true);
-    setErro("");
+    if (!silencioso) {
+      setCarregando(true);
+      setErro("");
+    }
 
     try {
-      setResultado(
-        await listarExecucoes(
-          token,
-          automacaoId,
-          pagina,
-          ITENS_POR_PAGINA,
-        ),
+      const historico = await listarExecucoes(
+        token,
+        automacaoId,
+        pagina,
+        ITENS_POR_PAGINA,
       );
+      setResultado(historico);
+      setErro("");
     } catch (falha) {
       if (falha instanceof ErroExecucoes && falha.status === 401) {
         sair();
         return;
       }
 
-      setErro(
-        falha instanceof ErroExecucoes
-          ? falha.message
-          : "Ocorreu um erro inesperado ao carregar o histórico.",
-      );
+      if (!silencioso) {
+        setErro(
+          falha instanceof ErroExecucoes
+            ? falha.message
+            : "Ocorreu um erro inesperado ao carregar o histórico.",
+        );
+      }
     } finally {
-      setCarregando(false);
+      if (!silencioso) {
+        setCarregando(false);
+      }
     }
   }, [token, automacaoId, pagina, sair]);
 
   useEffect(() => {
     void carregarHistorico();
   }, [carregarHistorico]);
+
+  const possuiExecucaoAtiva = resultado?.execucoes.some((execucao) =>
+    statusAtivos.includes(execucao.status),
+  ) ?? false;
+
+  useEffect(() => {
+    if (!possuiExecucaoAtiva) {
+      return;
+    }
+
+    const intervalo = window.setInterval(() => {
+      void carregarHistorico(true);
+    }, INTERVALO_ATUALIZACAO_MS);
+    return () => window.clearInterval(intervalo);
+  }, [possuiExecucaoAtiva, carregarHistorico]);
 
   const totalPaginas = Math.max(resultado?.total_paginas ?? 1, 1);
 

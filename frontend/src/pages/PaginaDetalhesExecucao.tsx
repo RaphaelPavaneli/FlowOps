@@ -3,13 +3,19 @@ import {
   AlertCircle,
   ArrowLeft,
   RefreshCw,
+  StopCircle,
   UserRound,
   Workflow,
 } from "lucide-react";
 import { Link, useLocation, useParams } from "react-router-dom";
 
 import { useAutenticacao } from "../contexts/ContextoAutenticacao";
-import { buscarExecucao, ErroExecucoes } from "../services/execucoes";
+import { ModalConfirmacao } from "../components/ModalConfirmacao";
+import {
+  buscarExecucao,
+  cancelarExecucao,
+  ErroExecucoes,
+} from "../services/execucoes";
 import type { Execucao, StatusExecucao } from "../types/execucoes";
 
 const rotulosStatus: Record<StatusExecucao, string> = {
@@ -17,6 +23,7 @@ const rotulosStatus: Record<StatusExecucao, string> = {
   processando: "Processando",
   concluida: "Concluída",
   falhou: "Falhou",
+  cancelada: "Cancelada",
 };
 
 const classesStatus: Record<StatusExecucao, string> = {
@@ -24,7 +31,10 @@ const classesStatus: Record<StatusExecucao, string> = {
   processando: "bg-[#eff6ff] text-[#275ea8]",
   concluida: "bg-[#ecfdf3] text-[#237a45]",
   falhou: "bg-[#fff1f0] text-[#9f312b]",
+  cancelada: "bg-[#f2f5f9] text-[#657287]",
 };
+
+const statusAtivos: StatusExecucao[] = ["pendente", "processando"];
 
 function formatarData(data: string | null) {
   if (!data) {
@@ -71,6 +81,8 @@ export function PaginaDetalhesExecucao() {
   const [execucao, setExecucao] = useState<Execucao | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [atualizando, setAtualizando] = useState(false);
+  const [cancelando, setCancelando] = useState(false);
+  const [confirmarCancelamento, setConfirmarCancelamento] = useState(false);
   const [erro, setErro] = useState("");
 
   useEffect(() => {
@@ -118,6 +130,43 @@ export function PaginaDetalhesExecucao() {
     void carregarDetalhes(true);
   }, [carregarDetalhes]);
 
+  useEffect(() => {
+    if (!execucao || !statusAtivos.includes(execucao.status)) {
+      return;
+    }
+
+    const temporizador = window.setTimeout(() => {
+      void carregarDetalhes();
+    }, 3000);
+    return () => window.clearTimeout(temporizador);
+  }, [execucao, carregarDetalhes]);
+
+  async function confirmarCancelamentoExecucao() {
+    if (!token || !execucao || cancelando) {
+      return;
+    }
+
+    setConfirmarCancelamento(false);
+    setCancelando(true);
+    setErro("");
+    try {
+      setExecucao(await cancelarExecucao(token, execucao.id));
+    } catch (falha) {
+      if (falha instanceof ErroExecucoes && falha.status === 401) {
+        sair();
+        return;
+      }
+      setErro(
+        falha instanceof ErroExecucoes
+          ? falha.message
+          : "Ocorreu um erro inesperado ao cancelar a execução.",
+      );
+      await carregarDetalhes();
+    } finally {
+      setCancelando(false);
+    }
+  }
+
   const automacaoId = execucao?.automacao_id;
   const voltarPara = automacaoId
     ? `/app/automacoes/${automacaoId}/execucoes`
@@ -149,19 +198,32 @@ export function PaginaDetalhesExecucao() {
           </div>
 
           {execucao && (
-            <button
-              className="inline-flex min-h-[42px] shrink-0 cursor-pointer items-center justify-center gap-2 rounded-[10px] border border-[#cfddf4] bg-white px-4 text-[12px] font-bold text-flowops-700 hover:bg-flowops-50 disabled:cursor-not-allowed disabled:opacity-55"
-              type="button"
-              disabled={atualizando}
-              onClick={() => void carregarDetalhes()}
-            >
-              <RefreshCw
-                className={atualizando ? "animate-spin" : ""}
-                size={16}
-                aria-hidden="true"
-              />
-              {atualizando ? "Atualizando..." : "Atualizar detalhes"}
-            </button>
+            <div className="flex flex-wrap gap-2.5">
+              {statusAtivos.includes(execucao.status) && (
+                <button
+                  className="inline-flex min-h-[42px] shrink-0 cursor-pointer items-center justify-center gap-2 rounded-[10px] border border-[#e2b8b4] bg-white px-4 text-[12px] font-bold text-[#9f312b] hover:bg-[#fff7f6] disabled:cursor-not-allowed disabled:opacity-55"
+                  type="button"
+                  disabled={cancelando}
+                  onClick={() => setConfirmarCancelamento(true)}
+                >
+                  <StopCircle size={16} aria-hidden="true" />
+                  {cancelando ? "Cancelando..." : "Parar execução"}
+                </button>
+              )}
+              <button
+                className="inline-flex min-h-[42px] shrink-0 cursor-pointer items-center justify-center gap-2 rounded-[10px] border border-[#cfddf4] bg-white px-4 text-[12px] font-bold text-flowops-700 hover:bg-flowops-50 disabled:cursor-not-allowed disabled:opacity-55"
+                type="button"
+                disabled={atualizando}
+                onClick={() => void carregarDetalhes()}
+              >
+                <RefreshCw
+                  className={atualizando ? "animate-spin" : ""}
+                  size={16}
+                  aria-hidden="true"
+                />
+                {atualizando ? "Atualizando..." : "Atualizar detalhes"}
+              </button>
+            </div>
           )}
         </section>
 
@@ -263,6 +325,15 @@ export function PaginaDetalhesExecucao() {
           </>
         )}
       </div>
+      <ModalConfirmacao
+        aberto={confirmarCancelamento}
+        titulo="Parar execução"
+        mensagem="Deseja interromper esta execução? O processo será encerrado e o histórico ficará com o status cancelada."
+        textoConfirmar="Parar execução"
+        textoCancelar="Continuar executando"
+        aoConfirmar={() => void confirmarCancelamentoExecucao()}
+        aoCancelar={() => setConfirmarCancelamento(false)}
+      />
     </main>
   );
 }

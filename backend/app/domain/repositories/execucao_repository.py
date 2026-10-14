@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from uuid import UUID
 
 from app.domain.entities.execucao import Execucao
+from app.domain.enums.status_execucao import StatusExecucao
 
 
 class ExecucaoRepository(ABC):
@@ -14,6 +15,26 @@ class ExecucaoRepository(ABC):
     @abstractmethod
     def atualizar(self, execucao: Execucao) -> Execucao | None:
         """Atualiza uma execução existente."""
+
+    @abstractmethod
+    def atualizar_se_status(
+        self,
+        execucao: Execucao,
+        status_esperados: frozenset[StatusExecucao],
+    ) -> Execucao | None:
+        """Atualiza somente quando o estado persistido ainda é o esperado."""
+
+    @abstractmethod
+    def existe_ativa_por_automacao_e_equipe(
+        self,
+        automacao_id: UUID,
+        equipe_id: UUID,
+    ) -> bool:
+        """Informa se a automação já possui execução ativa."""
+
+    @abstractmethod
+    def listar_ativas(self) -> list[Execucao]:
+        """Lista execuções ativas para recuperação interna do serviço."""
 
     @abstractmethod
     def buscar_por_id_e_equipe(

@@ -1,3 +1,4 @@
+import json
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -6,9 +7,16 @@ from sqlalchemy.orm import Session
 
 from app.domain.entities.automacao import Automacao
 from app.domain.enums.status_automacao import StatusAutomacao
+from app.domain.enums.resultado_teste_controlado import (
+    ResultadoTesteControlado,
+)
+from app.domain.enums.tipo_acao_automacao import TipoAcaoAutomacao
 from app.domain.exceptions.automacoes import AutomacaoNomeDuplicadoError
 from app.domain.repositories.automacao_repository import AutomacaoRepository
 from app.infrastructure.database.models.automacao_model import AutomacaoModel
+from app.domain.value_objects.configuracao_teste_controlado import (
+    ConfiguracaoTesteControlado,
+)
 
 
 class SqlAutomacaoRepository(AutomacaoRepository):
@@ -76,6 +84,15 @@ class SqlAutomacaoRepository(AutomacaoRepository):
             nome=automacao.nome,
             nome_normalizado=automacao.nome_normalizado,
             descricao=automacao.descricao,
+            tipo_acao=automacao.tipo_acao.value,
+            configuracao_acao=json.dumps(
+                {
+                    "resultado": (
+                        automacao.configuracao_acao.resultado.value
+                    )
+                },
+                ensure_ascii=False,
+            ),
             status=automacao.status.value,
             criada_em=automacao.criada_em,
             atualizada_em=automacao.atualizada_em,
@@ -108,6 +125,7 @@ class SqlAutomacaoRepository(AutomacaoRepository):
 
     @staticmethod
     def _para_entidade(modelo: AutomacaoModel) -> Automacao:
+        configuracao = json.loads(modelo.configuracao_acao)
         return Automacao(
             id=modelo.id,
             equipe_id=modelo.equipe_id,
@@ -115,6 +133,12 @@ class SqlAutomacaoRepository(AutomacaoRepository):
             nome=modelo.nome,
             nome_normalizado=modelo.nome_normalizado,
             descricao=modelo.descricao,
+            tipo_acao=TipoAcaoAutomacao(modelo.tipo_acao),
+            configuracao_acao=ConfiguracaoTesteControlado(
+                resultado=ResultadoTesteControlado(
+                    configuracao["resultado"]
+                ),
+            ),
             status=StatusAutomacao(modelo.status),
             criada_em=modelo.criada_em,
             atualizada_em=modelo.atualizada_em,

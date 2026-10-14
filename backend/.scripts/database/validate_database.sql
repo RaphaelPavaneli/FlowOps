@@ -59,10 +59,10 @@ END;
 IF NOT EXISTS (
     SELECT 1
     FROM dbo.alembic_version
-    WHERE version_num = N'20260914_01'
+    WHERE version_num = N'20261002_01'
 )
 BEGIN
-    THROW 51018, N'O banco não está na revisão Alembic 20260914_01.', 1;
+    THROW 51018, N'O banco não está na revisão Alembic 20261002_01.', 1;
 END;
 
 IF NOT EXISTS (
@@ -104,6 +104,31 @@ IF NOT EXISTS (
 )
 BEGIN
     THROW 51023, N'A restrição de status das execuções não foi encontrada.', 1;
+END;
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.check_constraints
+    WHERE parent_object_id = OBJECT_ID(N'operacao.execucoes')
+        AND name = N'ck_operacao_execucoes_status'
+        AND OBJECT_DEFINITION(object_id) LIKE N'%cancelada%'
+)
+BEGIN
+    THROW 51025, N'O status cancelada não está permitido nas execuções.', 1;
+END;
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'operacao.execucoes')
+        AND name = N'uq_operacao_execucoes_automacao_ativa'
+        AND is_unique = 1
+        AND has_filter = 1
+        AND filter_definition LIKE N'%pendente%'
+        AND filter_definition LIKE N'%processando%'
+)
+BEGIN
+    THROW 51026, N'O índice único de execução ativa não foi encontrado.', 1;
 END;
 
 IF (

@@ -15,11 +15,43 @@ os.environ.setdefault("DB_PASSWORD", "senha-exclusiva-dos-testes")
 os.environ.setdefault("JWT_SECRET_KEY", TEST_JWT_SECRET)
 
 from app.api.dependencies.autenticacao import get_token_service  # noqa: E402
+from app.api.dependencies.execucoes import (  # noqa: E402
+    get_despachante_execucao,
+)
+from app.domain.entities.automacao import Automacao  # noqa: E402
 from app.infrastructure.database.connection import Base, get_db_session  # noqa: E402
 from app.infrastructure.security.jwt_token_service import (  # noqa: E402
     JwtTokenService,
 )
 from app.main import app  # noqa: E402
+
+
+class DespachanteExecucaoTeste:
+    """Fila determinística: registra ações sem iniciar threads nos testes HTTP."""
+
+    def __init__(self) -> None:
+        self.despachadas: list[tuple[object, object, Automacao]] = []
+        self.canceladas: list[object] = []
+
+    def despachar(
+        self,
+        execucao_id: object,
+        equipe_id: object,
+        automacao: Automacao,
+    ) -> None:
+        self.despachadas.append((execucao_id, equipe_id, automacao))
+
+    def cancelar(self, execucao_id: object) -> bool:
+        self.canceladas.append(execucao_id)
+        return True
+
+    def encerrar(self) -> None:
+        return None
+
+
+@pytest.fixture
+def despachante_execucao() -> DespachanteExecucaoTeste:
+    return DespachanteExecucaoTeste()
 
 
 @pytest.fixture
@@ -50,6 +82,7 @@ def session_factory() -> Generator[sessionmaker[Session], None, None]:
 @pytest.fixture
 def client(
     session_factory: sessionmaker[Session],
+    despachante_execucao: DespachanteExecucaoTeste,
 ) -> Generator[TestClient, None, None]:
 
     def override_db_session() -> Generator[Session, None, None]:
@@ -67,8 +100,20 @@ def client(
 
     app.dependency_overrides[get_db_session] = override_db_session
     app.dependency_overrides[get_token_service] = override_token_service
+    app.dependency_overrides[get_despachante_execucao] = (
+        lambda: despachante_execucao
+    )
 
-    with TestClient(app) as test_client:
-        yield test_client
+    gerenciar_execucoes_original = (
+        app.state.gerenciar_execucoes_no_lifespan
+    )
+    app.state.gerenciar_execucoes_no_lifespan = False
+    try:
+        with TestClient(app) as test_client:
+            yield test_client
+    finally:
+        app.state.gerenciar_execucoes_no_lifespan = (
+            gerenciar_execucoes_original
+        )
 
     app.dependency_overrides.clear()

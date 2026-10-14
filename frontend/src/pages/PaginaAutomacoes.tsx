@@ -192,8 +192,8 @@ export function PaginaAutomacoes() {
     if (
       !token ||
       !confirmacaoStatus ||
-      alterandoStatusId ||
-      executandoId
+      alterandoStatusId === confirmacaoStatus.automacao.id ||
+      executandoId === confirmacaoStatus.automacao.id
     ) {
       return;
     }
@@ -250,8 +250,8 @@ export function PaginaAutomacoes() {
     if (
       !token ||
       !automacaoParaExecutar ||
-      alterandoStatusId ||
-      executandoId
+      alterandoStatusId === automacaoParaExecutar.id ||
+      executandoId === automacaoParaExecutar.id
     ) {
       return;
     }
@@ -498,6 +498,12 @@ export function PaginaAutomacoes() {
                   ID: <span className="break-all font-mono">{execucaoCriada.id}</span>
                   {" · "}Status: <strong>Pendente</strong>
                 </p>
+                <Link
+                  className="mt-2 inline-flex text-[11.5px] font-bold text-flowops-700 no-underline hover:text-flowops-800"
+                  to={`/app/execucoes/${execucaoCriada.id}`}
+                >
+                  Acompanhar execução
+                </Link>
               </div>
             </div>
           </section>
@@ -624,8 +630,8 @@ export function PaginaAutomacoes() {
                             className="inline-flex min-h-9 min-w-[104px] cursor-pointer items-center justify-center gap-1.5 rounded-[9px] border border-flowops-700 bg-flowops-700 px-3 text-[11px] font-bold text-white transition-colors hover:bg-flowops-800 disabled:cursor-not-allowed disabled:opacity-55"
                             type="button"
                             disabled={
-                              alterandoStatusId !== null ||
-                              executandoId !== null
+                              alterandoStatusId === automacao.id ||
+                              executandoId === automacao.id
                             }
                             onClick={() => setAutomacaoParaExecutar(automacao)}
                           >
@@ -648,7 +654,8 @@ export function PaginaAutomacoes() {
                           className="inline-flex min-h-9 min-w-[104px] cursor-pointer items-center justify-center gap-1.5 rounded-[9px] border border-[#cfddf4] bg-white px-3 text-[11px] font-bold text-flowops-700 transition-colors hover:bg-flowops-50 disabled:cursor-not-allowed disabled:opacity-55"
                           type="button"
                           disabled={
-                            alterandoStatusId !== null || executandoId !== null
+                            alterandoStatusId === automacao.id ||
+                            executandoId === automacao.id
                           }
                           onClick={() =>
                             setConfirmacaoStatus({

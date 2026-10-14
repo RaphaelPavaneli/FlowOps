@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
 import pytest
@@ -6,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.infrastructure.database.models.equipe_model import EquipeModel
+from app.infrastructure.database.models.execucao_model import ExecucaoModel
 from app.infrastructure.database.models.usuario_model import UsuarioModel
 from app.infrastructure.database.repositories.sql_execucao_repository import (
     SqlExecucaoRepository,
@@ -86,10 +88,18 @@ def preparar_usuario_com_equipe(
     return usuario, obter_token(client, email)
 
 
-def criar_automacao(client: TestClient, token: str, nome: str) -> dict:
+def criar_automacao(
+    client: TestClient,
+    token: str,
+    nome: str,
+    resultado: str = "sucesso",
+) -> dict:
     response = client.post(
         "/api/v1/automacoes",
-        json={"nome": nome},
+        json={
+            "nome": nome,
+            "configuracao_acao": {"resultado": resultado},
+        },
         headers=headers(token),
     )
     assert response.status_code == 201
@@ -126,6 +136,22 @@ def preparar_automacao_ativa(
     return equipe, usuario, automacao, token
 
 
+def finalizar_execucao(
+    session_factory: sessionmaker[Session],
+    execucao_id: str,
+    status: str = "concluida",
+) -> None:
+    with session_factory() as session:
+        modelo = session.get(ExecucaoModel, UUID(execucao_id))
+        assert modelo is not None
+        agora = datetime.now(timezone.utc)
+        modelo.status = status
+        modelo.iniciada_em = modelo.iniciada_em or agora
+        modelo.finalizada_em = agora
+        modelo.atualizada_em = agora
+        session.commit()
+
+
 def test_inicio_de_execucao_exige_autenticacao(client: TestClient) -> None:
     response = client.post(
         f"/api/v1/automacoes/{uuid4()}/execucoes",
@@ -134,7 +160,7 @@ def test_inicio_de_execucao_exige_autenticacao(client: TestClient) -> None:
     assert response.status_code == 401
 
 
-def test_usuario_inicia_execucao_pendente_da_automacao_ativa(
+def test_inicio_assincrono_retorna_pendente(
     client: TestClient,
     session_factory: sessionmaker[Session],
 ) -> None:
@@ -148,7 +174,7 @@ def test_usuario_inicia_execucao_pendente_da_automacao_ativa(
         headers=headers(token),
     )
 
-    assert response.status_code == 201
+    assert response.status_code == 202
     dados = response.json()
     assert dados["automacao_id"] == automacao["id"]
     assert dados["equipe_id"] == equipe["id"]
@@ -167,6 +193,134 @@ def test_usuario_inicia_execucao_pendente_da_automacao_ativa(
 
     assert execucao is not None
     assert execucao.status.value == "pendente"
+    assert execucao.iniciada_em is None
+    assert execucao.finalizada_em is None
+
+
+def test_configuracao_de_falha_tambem_e_agendada_como_pendente(
+    client: TestClient,
+    session_factory: sessionmaker[Session],
+) -> None:
+    admin_token = preparar_administrador(client, session_factory)
+    equipe = criar_equipe(client, admin_token, "Equipe Operações")
+    usuario, token = preparar_usuario_com_equipe(
+        client,
+        admin_token,
+        nome="Usuário executor",
+        email="executor@email.com",
+        equipe=equipe,
+    )
+    automacao = criar_automacao(
+        client,
+        token,
+        "Automação com falha",
+        resultado="falha",
+    )
+    ativar_automacao(client, token, automacao["id"])
+
+    response = client.post(
+        f"/api/v1/automacoes/{automacao['id']}/execucoes",
+        headers=headers(token),
+    )
+
+    assert response.status_code == 202
+    dados = response.json()
+    assert dados["equipe_id"] == equipe["id"]
+    assert dados["solicitada_por_usuario_id"] == usuario["id"]
+    assert dados["status"] == "pendente"
+    assert dados["mensagem_erro"] is None
+    assert dados["iniciada_em"] is None
+    assert dados["finalizada_em"] is None
+
+
+def test_mesma_automacao_nao_pode_ser_iniciada_duas_vezes(
+    client: TestClient,
+    session_factory: sessionmaker[Session],
+) -> None:
+    _, _, automacao, token = preparar_automacao_ativa(client, session_factory)
+
+    primeira = client.post(
+        f"/api/v1/automacoes/{automacao['id']}/execucoes",
+        headers=headers(token),
+    )
+    segunda = client.post(
+        f"/api/v1/automacoes/{automacao['id']}/execucoes",
+        headers=headers(token),
+    )
+
+    assert primeira.status_code == 202
+    assert segunda.status_code == 409
+    assert segunda.json()["detail"] == (
+        "A automação já possui uma execução em andamento."
+    )
+
+
+def test_automacoes_diferentes_podem_ser_agendadas_independentemente(
+    client: TestClient,
+    session_factory: sessionmaker[Session],
+) -> None:
+    _, _, automacao_a, token = preparar_automacao_ativa(client, session_factory)
+    automacao_b = criar_automacao(client, token, "Segunda automação")
+    ativar_automacao(client, token, automacao_b["id"])
+
+    respostas = [
+        client.post(
+            f"/api/v1/automacoes/{automacao['id']}/execucoes",
+            headers=headers(token),
+        )
+        for automacao in (automacao_a, automacao_b)
+    ]
+
+    assert [resposta.status_code for resposta in respostas] == [202, 202]
+    assert respostas[0].json()["id"] != respostas[1].json()["id"]
+
+
+def test_usuario_cancela_execucao_ativa(
+    client: TestClient,
+    session_factory: sessionmaker[Session],
+    despachante_execucao: object,
+) -> None:
+    _, _, automacao, token = preparar_automacao_ativa(client, session_factory)
+    criacao = client.post(
+        f"/api/v1/automacoes/{automacao['id']}/execucoes",
+        headers=headers(token),
+    )
+    execucao_id = criacao.json()["id"]
+
+    response = client.post(
+        f"/api/v1/execucoes/{execucao_id}/cancelar",
+        headers=headers(token),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "cancelada"
+    assert response.json()["finalizada_em"] is not None
+    assert UUID(execucao_id) in despachante_execucao.canceladas
+
+
+def test_execucao_terminal_nao_pode_ser_cancelada(
+    client: TestClient,
+    session_factory: sessionmaker[Session],
+) -> None:
+    _, _, automacao, token = preparar_automacao_ativa(client, session_factory)
+    criacao = client.post(
+        f"/api/v1/automacoes/{automacao['id']}/execucoes",
+        headers=headers(token),
+    ).json()
+    finalizar_execucao(session_factory, criacao["id"])
+
+    response = client.post(
+        f"/api/v1/execucoes/{criacao['id']}/cancelar",
+        headers=headers(token),
+    )
+
+    assert response.status_code == 409
+
+
+def test_cancelamento_exige_autenticacao(client: TestClient) -> None:
+    response = client.post(f"/api/v1/execucoes/{uuid4()}/cancelar")
+
+    assert response.status_code == 401
 
 
 @pytest.mark.parametrize("status", ["rascunho", "pausada"])
@@ -313,7 +467,7 @@ def test_endpoint_de_execucoes_esta_documentado_no_openapi(
         "/api/v1/automacoes/{automacao_id}/execucoes"
     ]["post"]
     assert "Execuções" in operacao["tags"]
-    assert "201" in operacao["responses"]
+    assert "202" in operacao["responses"]
 
 
 def test_consultas_de_execucao_exigem_autenticacao(
@@ -340,13 +494,16 @@ def test_historico_de_execucoes_e_paginado_e_ordenado(
         f"/api/v1/automacoes/{automacao['id']}/execucoes",
         headers=headers(token),
     )
-    execucoes = [
-        client.post(
+    execucoes = []
+    for _ in range(3):
+        criacao = client.post(
             f"/api/v1/automacoes/{automacao['id']}/execucoes",
             headers=headers(token),
-        ).json()
-        for _ in range(3)
-    ]
+        )
+        assert criacao.status_code == 202
+        execucao = criacao.json()
+        execucoes.append(execucao)
+        finalizar_execucao(session_factory, execucao["id"])
 
     response = client.get(
         f"/api/v1/automacoes/{automacao['id']}/execucoes"
@@ -440,6 +597,10 @@ def test_historico_e_detalhes_nao_vazam_entre_equipes(
         f"/api/v1/execucoes/{execucao['id']}",
         headers=headers(token_b),
     )
+    cancelamento_externo = client.post(
+        f"/api/v1/execucoes/{execucao['id']}/cancelar",
+        headers=headers(token_b),
+    )
     detalhe_inexistente = client.get(
         f"/api/v1/execucoes/{uuid4()}",
         headers=headers(token_b),
@@ -451,6 +612,8 @@ def test_historico_e_detalhes_nao_vazam_entre_equipes(
     assert detalhe_externo.status_code == 404
     assert detalhe_inexistente.status_code == 404
     assert detalhe_externo.json() == detalhe_inexistente.json()
+    assert cancelamento_externo.status_code == 404
+    assert cancelamento_externo.json() == detalhe_inexistente.json()
 
 
 def test_usuario_sem_equipe_nao_consulta_execucoes(
@@ -522,7 +685,12 @@ def test_consultas_de_execucao_estao_documentadas_no_openapi(
         "/api/v1/automacoes/{automacao_id}/execucoes"
     ]["get"]
     detalhes = caminhos["/api/v1/execucoes/{execucao_id}"]["get"]
+    cancelamento = caminhos[
+        "/api/v1/execucoes/{execucao_id}/cancelar"
+    ]["post"]
     assert "Execuções" in historico["tags"]
     assert "Execuções" in detalhes["tags"]
+    assert "Execuções" in cancelamento["tags"]
     assert "200" in historico["responses"]
     assert "200" in detalhes["responses"]
+    assert "200" in cancelamento["responses"]

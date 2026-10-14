@@ -49,6 +49,8 @@ def criar_automacao(
             usuario,
             dados.nome,
             dados.descricao,
+            dados.tipo_acao,
+            dados.configuracao_acao.resultado,
         )
     except AutomacaoNomeDuplicadoError as erro:
         raise HTTPException(

@@ -127,3 +127,43 @@ def test_execucao_com_falha_nao_pode_concluir() -> None:
 
     with pytest.raises(TransicaoStatusExecucaoInvalidaError):
         execucao.concluir(MOMENTO_FINAL)
+
+
+@pytest.mark.parametrize("iniciar_antes", [False, True])
+def test_execucao_pendente_ou_processando_pode_ser_cancelada(
+    iniciar_antes: bool,
+) -> None:
+    execucao = criar_execucao()
+    if iniciar_antes:
+        execucao.iniciar(MOMENTO_INICIO)
+
+    execucao.cancelar(MOMENTO_FINAL)
+
+    assert execucao.status is StatusExecucao.CANCELADA
+    assert execucao.mensagem_erro is None
+    assert execucao.finalizada_em == MOMENTO_FINAL
+    assert execucao.atualizada_em == MOMENTO_FINAL
+
+
+@pytest.mark.parametrize(
+    "status_terminal",
+    [
+        StatusExecucao.CONCLUIDA,
+        StatusExecucao.FALHOU,
+        StatusExecucao.CANCELADA,
+    ],
+)
+def test_execucao_terminal_nao_pode_ser_cancelada(
+    status_terminal: StatusExecucao,
+) -> None:
+    execucao = criar_execucao()
+    if status_terminal is StatusExecucao.CONCLUIDA:
+        execucao.iniciar(MOMENTO_INICIO)
+        execucao.concluir(MOMENTO_FINAL)
+    elif status_terminal is StatusExecucao.FALHOU:
+        execucao.falhar("Falha", MOMENTO_FINAL)
+    else:
+        execucao.cancelar(MOMENTO_FINAL)
+
+    with pytest.raises(TransicaoStatusExecucaoInvalidaError):
+        execucao.cancelar(MOMENTO_FINAL)

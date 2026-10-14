@@ -9,8 +9,8 @@ persistência no SQL Server, migrations e testes automatizados.
 
 > **Status:** MVP funcional, containerizado e com pipeline automatizado de
 > integração, publicação de imagens e deploy no Azure Container Apps. Nesta
-> versão, o sistema organiza o catálogo de automações; ele ainda não executa
-> processos externos.
+> versão, o sistema organiza o catálogo e executa cenários controlados em
+> subprocessos assíncronos locais, com sucesso, falha e cancelamento.
 
 ## Sumário
 
@@ -400,7 +400,10 @@ Um roteiro curto para apresentar o MVP:
 7. Volte ao usuário comum e atualize a situação.
 8. Cadastre uma automação.
 9. Entre com outro membro da mesma equipe e mostre o compartilhamento.
-10. Explique que outra equipe não recebe esse registro.
+10. Ative duas automações controladas e inicie as duas execuções.
+11. Acompanhe `pendente → processando → concluída|falhou` nos detalhes.
+12. Inicie outra execução e use **Parar execução** para registrar `cancelada`.
+13. Explique que outra equipe não recebe esses registros.
 
 Esse fluxo demonstra frontend, API, autenticação, autorização, banco relacional
 e isolamento de dados.
@@ -428,6 +431,8 @@ A suíte cobre, entre outros cenários:
 - Estados e transições das automações e execuções.
 - Criação, histórico e detalhes das execuções.
 - Isolamento das execuções entre equipes.
+- Processamento assíncrono, exclusividade por automação e cancelamento.
+- Recuperação de execuções interrompidas durante reinício da API.
 
 Os testes comuns utilizam SQLite em memória com dependências substituídas. Eles
 validam as regras e a integração HTTP, mas não comprovam o comportamento
@@ -450,7 +455,7 @@ As evidências devem ser interpretadas por camada:
 | `alembic current` | Revisão registrada no banco conectado | Integridade de todos os objetos |
 | `validate_database.sql` | Tabelas, índices, restrições e permissões no SQL Server | Fluxo HTTP completo |
 
-A revisão atual esperada no SQL Server é `20260914_01`. O script
+A revisão atual esperada no SQL Server é `20261002_01`. O script
 `backend/.scripts/database/validate_database.sql` realiza consultas de
 validação sem criar registros de negócio. Já `alembic upgrade head` altera o
 schema e deve ser executado somente após confirmar o ambiente de destino.
@@ -519,8 +524,10 @@ Práticas aplicadas no MVP:
 
 - A associação do usuário à equipe é manual e administrativa.
 - O perfil `administrador` é global dentro desta versão do projeto.
-- O sistema registra execuções como pendentes, mas ainda não possui worker para
-  processar integrações externas.
+- O despachante assíncrono é local e adequado a uma única instância da API; ele
+  ainda não é uma fila distribuída para múltiplas réplicas.
+- O executor atual processa apenas o cenário de teste controlado com duração de
+  60 segundos; integrações externas reais continuam fora do MVP.
 - A interface permite ativar e pausar automações, mas ainda não oferece edição
   ou arquivamento.
 - Não existe recuperação de senha ou verificação de e-mail.
@@ -543,7 +550,9 @@ Melhorias possíveis depois da entrega do MVP:
 - Notificações e filtros avançados no histórico de execuções.
 - Recuperação de senha e verificação de e-mail.
 - Testes de componentes no frontend.
-- Execução real de automações com processamento assíncrono.
+- Fila distribuída com Redis/Celery ou serviço equivalente para múltiplas
+  instâncias.
+- Novos executores para integrações externas reais.
 - Disponibilização planejada de uma demonstração pública.
 - Logs estruturados e observabilidade.
 
