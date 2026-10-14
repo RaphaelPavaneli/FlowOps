@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.api.dependencies.autenticacao import get_usuario_atual
 from app.api.dependencies.execucoes import (
     get_buscar_execucao,
+    get_cancelar_execucao,
     get_iniciar_execucao,
     get_listar_execucoes,
 )
@@ -16,6 +17,7 @@ from app.api.schemas.execucoes import (
     ListaExecucoesResponse,
 )
 from app.application.use_cases.buscar_execucao import BuscarExecucao
+from app.application.use_cases.cancelar_execucao import CancelarExecucao
 from app.application.use_cases.iniciar_execucao import IniciarExecucao
 from app.application.use_cases.listar_execucoes import ListarExecucoes
 from app.domain.entities.usuario import Usuario
@@ -25,7 +27,12 @@ from app.domain.exceptions.automacoes import (
     EquipeUsuarioIndisponivelError,
     UsuarioSemEquipeError,
 )
-from app.domain.exceptions.execucoes import ExecucaoNaoEncontradaError
+from app.domain.exceptions.execucoes import (
+    ExecucaoEmAndamentoError,
+    ExecucaoIndisponivelParaCancelamentoError,
+    ExecucaoNaoEncontradaError,
+    FalhaAoAgendarExecucaoError,
+)
 
 
 router = APIRouter(tags=["Execuções"])
@@ -34,7 +41,7 @@ router = APIRouter(tags=["Execuções"])
 @router.post(
     "/automacoes/{automacao_id}/execucoes",
     response_model=ExecucaoResponse,
-    status_code=status.HTTP_201_CREATED,
+    status_code=status.HTTP_202_ACCEPTED,
     summary="Iniciar execução manual",
 )
 def iniciar_execucao(
@@ -58,6 +65,16 @@ def iniciar_execucao(
             status_code=status.HTTP_409_CONFLICT,
             detail="A automação precisa estar ativa para ser executada.",
         ) from erro
+    except ExecucaoEmAndamentoError as erro:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A automação já possui uma execução em andamento.",
+        ) from erro
+    except FalhaAoAgendarExecucaoError as erro:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Não foi possível iniciar o processamento da execução.",
+        ) from erro
     except UsuarioSemEquipeError as erro:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -68,6 +85,37 @@ def iniciar_execucao(
             status_code=status.HTTP_409_CONFLICT,
             detail="A equipe do usuário não está disponível.",
         ) from erro
+
+    return ExecucaoResponse.model_validate(execucao)
+
+
+@router.post(
+    "/execucoes/{execucao_id}/cancelar",
+    response_model=ExecucaoResponse,
+    summary="Cancelar execução ativa",
+)
+def cancelar_execucao(
+    execucao_id: UUID,
+    usuario: Annotated[Usuario, Depends(get_usuario_atual)],
+    caso_de_uso: Annotated[
+        CancelarExecucao,
+        Depends(get_cancelar_execucao),
+    ],
+) -> ExecucaoResponse:
+    try:
+        execucao = caso_de_uso.executar(usuario, execucao_id)
+    except ExecucaoNaoEncontradaError as erro:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Execução não encontrada.",
+        ) from erro
+    except ExecucaoIndisponivelParaCancelamentoError as erro:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A execução não está disponível para cancelamento.",
+        ) from erro
+    except (UsuarioSemEquipeError, EquipeUsuarioIndisponivelError) as erro:
+        raise _erro_contexto_equipe(erro) from erro
 
     return ExecucaoResponse.model_validate(execucao)
 
