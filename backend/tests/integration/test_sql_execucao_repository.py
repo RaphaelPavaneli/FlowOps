@@ -1,10 +1,12 @@
 from datetime import datetime, timedelta
 from uuid import UUID, uuid4
 
+import pytest
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.domain.entities.execucao import Execucao
 from app.domain.enums.status_execucao import StatusExecucao
+from app.domain.exceptions.execucoes import ExecucaoEmAndamentoError
 from app.infrastructure.database.repositories.sql_execucao_repository import (
     SqlExecucaoRepository,
 )
@@ -21,13 +23,14 @@ def criar_execucao(
     equipe_id: UUID | None = None,
     solicitante_id: UUID | None = None,
     criada_em: datetime = MOMENTO_CRIACAO,
+    status: StatusExecucao = StatusExecucao.PENDENTE,
 ) -> Execucao:
     return Execucao(
         id=execucao_id or uuid4(),
         automacao_id=automacao_id or uuid4(),
         equipe_id=equipe_id or uuid4(),
         solicitada_por_usuario_id=solicitante_id or uuid4(),
-        status=StatusExecucao.PENDENTE,
+        status=status,
         mensagem_erro=None,
         criada_em=criada_em,
         iniciada_em=None,
@@ -155,27 +158,32 @@ def test_historico_isola_equipe_automacao_e_pagina_deterministicamente(
             automacao_id=automacao_id,
             equipe_id=equipe_id,
             criada_em=momento_recente,
+            status=StatusExecucao.CONCLUIDA,
         ),
         criar_execucao(
             execucao_id=execucao_id_3,
             automacao_id=automacao_id,
             equipe_id=equipe_id,
             criada_em=momento_recente,
+            status=StatusExecucao.FALHOU,
         ),
         criar_execucao(
             execucao_id=UUID(int=1),
             automacao_id=automacao_id,
             equipe_id=equipe_id,
+            status=StatusExecucao.CANCELADA,
         ),
     ]
     fora_do_escopo = [
         criar_execucao(
             automacao_id=automacao_id,
             equipe_id=outra_equipe_id,
+            status=StatusExecucao.CONCLUIDA,
         ),
         criar_execucao(
             automacao_id=outra_automacao_id,
             equipe_id=equipe_id,
+            status=StatusExecucao.CONCLUIDA,
         ),
     ]
 
@@ -217,18 +225,21 @@ def test_contagem_considera_automacao_e_equipe(
             criar_execucao(
                 automacao_id=automacao_id,
                 equipe_id=equipe_id,
+                status=StatusExecucao.CONCLUIDA,
             )
         )
         repositorio.salvar(
             criar_execucao(
                 automacao_id=automacao_id,
                 equipe_id=equipe_id,
+                status=StatusExecucao.FALHOU,
             )
         )
         repositorio.salvar(
             criar_execucao(
                 automacao_id=automacao_id,
                 equipe_id=outra_equipe_id,
+                status=StatusExecucao.CANCELADA,
             )
         )
 
@@ -243,3 +254,85 @@ def test_contagem_considera_automacao_e_equipe(
 
     assert total == 2
     assert total_inexistente == 0
+
+
+def test_indice_impede_duas_execucoes_ativas_da_mesma_automacao(
+    session_factory: sessionmaker[Session],
+) -> None:
+    automacao_id = uuid4()
+    equipe_id = uuid4()
+
+    with session_factory() as session:
+        repositorio = SqlExecucaoRepository(session)
+        repositorio.salvar(
+            criar_execucao(
+                automacao_id=automacao_id,
+                equipe_id=equipe_id,
+            )
+        )
+
+        with pytest.raises(ExecucaoEmAndamentoError):
+            repositorio.salvar(
+                criar_execucao(
+                    automacao_id=automacao_id,
+                    equipe_id=equipe_id,
+                )
+            )
+
+
+def test_indice_permite_historico_terminal_e_automacoes_diferentes(
+    session_factory: sessionmaker[Session],
+) -> None:
+    automacao_id = uuid4()
+    equipe_id = uuid4()
+
+    with session_factory() as session:
+        repositorio = SqlExecucaoRepository(session)
+        repositorio.salvar(
+            criar_execucao(
+                automacao_id=automacao_id,
+                equipe_id=equipe_id,
+                status=StatusExecucao.CONCLUIDA,
+            )
+        )
+        repositorio.salvar(
+            criar_execucao(
+                automacao_id=automacao_id,
+                equipe_id=equipe_id,
+            )
+        )
+        repositorio.salvar(
+            criar_execucao(
+                automacao_id=uuid4(),
+                equipe_id=equipe_id,
+            )
+        )
+
+
+def test_atualizacao_condicional_nao_sobrescreve_estado_terminal(
+    session_factory: sessionmaker[Session],
+) -> None:
+    execucao = criar_execucao(status=StatusExecucao.CANCELADA)
+    tentativa = criar_execucao(
+        execucao_id=execucao.id,
+        automacao_id=execucao.automacao_id,
+        equipe_id=execucao.equipe_id,
+        solicitante_id=execucao.solicitada_por_usuario_id,
+        status=StatusExecucao.CONCLUIDA,
+    )
+
+    with session_factory() as session:
+        repositorio = SqlExecucaoRepository(session)
+        repositorio.salvar(execucao)
+        resultado = repositorio.atualizar_se_status(
+            tentativa,
+            frozenset({StatusExecucao.PROCESSANDO}),
+        )
+        persistida = repositorio.buscar_por_id_e_equipe(
+            execucao.id,
+            execucao.equipe_id,
+        )
+
+    assert resultado is None
+    assert persistida is not None
+    assert persistida.status is StatusExecucao.CANCELADA

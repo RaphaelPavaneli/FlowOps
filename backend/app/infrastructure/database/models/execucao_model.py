@@ -1,7 +1,16 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, Unicode, Uuid
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    String,
+    Unicode,
+    Uuid,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.database.connection import Base
@@ -13,8 +22,18 @@ class ExecucaoModel(Base):
     __tablename__ = "execucoes"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('pendente', 'processando', 'concluida', 'falhou')",
+            "status IN ('pendente', 'processando', 'concluida', "
+            "'falhou', 'cancelada')",
             name="ck_operacao_execucoes_status",
+        ),
+        Index(
+            "uq_operacao_execucoes_automacao_ativa",
+            "automacao_id",
+            unique=True,
+            mssql_where=text("status IN ('pendente', 'processando')"),
+            sqlite_where=text(
+                "status IN ('pendente', 'processando')"
+            ),
         ),
         Index(
             "ix_operacao_execucoes_equipe_automacao_criada_em",
