@@ -23,3 +23,15 @@ class MensagemFalhaExecucaoObrigatoriaError(Exception):
 
 class ExecucaoNaoEncontradaError(Exception):
     """Evita revelar execuções ausentes ou pertencentes a outra equipe."""
+
+
+class ExecucaoEmAndamentoError(Exception):
+    """Impede mais de uma execução ativa para a mesma automação."""
+
+
+class ExecucaoIndisponivelParaCancelamentoError(Exception):
+    """Impede o cancelamento de uma execução em estado terminal."""
+
+
+class FalhaAoAgendarExecucaoError(Exception):
+    """Informa que a execução persistida não pôde ser despachada."""

@@ -14,12 +14,14 @@ TRANSICOES_PERMITIDAS: dict[StatusExecucao, frozenset[StatusExecucao]] = {
         {
             StatusExecucao.PROCESSANDO,
             StatusExecucao.FALHOU,
+            StatusExecucao.CANCELADA,
         }
     ),
     StatusExecucao.PROCESSANDO: frozenset(
         {
             StatusExecucao.CONCLUIDA,
             StatusExecucao.FALHOU,
+            StatusExecucao.CANCELADA,
         }
     ),
 }
@@ -64,6 +66,14 @@ class Execucao:
         self._garantir_transicao(StatusExecucao.FALHOU)
         self.status = StatusExecucao.FALHOU
         self.mensagem_erro = mensagem_limpa
+        self.finalizada_em = momento
+        self.atualizada_em = momento
+
+    def cancelar(self, momento: datetime) -> None:
+        """Cancela uma execução pendente ou em processamento."""
+        self._garantir_transicao(StatusExecucao.CANCELADA)
+        self.status = StatusExecucao.CANCELADA
+        self.mensagem_erro = None
         self.finalizada_em = momento
         self.atualizada_em = momento
 

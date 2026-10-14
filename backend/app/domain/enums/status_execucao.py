@@ -8,3 +8,4 @@ class StatusExecucao(StrEnum):
     PROCESSANDO = "processando"
     CONCLUIDA = "concluida"
     FALHOU = "falhou"
+    CANCELADA = "cancelada"
