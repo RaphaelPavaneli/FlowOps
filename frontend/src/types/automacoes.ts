@@ -1,3 +1,5 @@
+import type { Execucao } from "./execucoes";
+
 export type StatusAutomacao = "rascunho" | "ativa" | "pausada";
 
 export interface Automacao {
@@ -16,10 +18,22 @@ export interface CriarAutomacaoRequest {
   descricao?: string | null;
 }
 
+export interface AutomacaoListada extends Automacao {
+  ultima_execucao: Execucao | null;
+}
+
+export interface ResumoAutomacoes {
+  total: number;
+  ativas: number;
+  pausadas: number;
+  rascunhos: number;
+}
+
 export interface ListaAutomacoesResponse {
-  automacoes: Automacao[];
+  automacoes: AutomacaoListada[];
   pagina: number;
   itens_por_pagina: number;
   total: number;
   total_paginas: number;
+  resumo: ResumoAutomacoes;
 }

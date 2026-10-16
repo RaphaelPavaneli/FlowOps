@@ -24,7 +24,7 @@ export function PaginaMinhaConta() {
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_82%_12%,rgba(191,219,254,0.42),transparent_27%),linear-gradient(145deg,#fff,#f7faff)]">
+    <main className="min-h-screen bg-flowops-app">
       <div className="mx-auto grid min-h-[calc(100vh-77px)] w-[calc(100%_-_48px)] max-w-[1160px] grid-cols-[minmax(0,0.9fr)_minmax(420px,1.1fr)] items-center gap-[clamp(60px,9vw,130px)] py-[70px] max-[960px]:grid-cols-1 max-[960px]:content-center max-[960px]:gap-12 max-[700px]:min-h-[calc(100vh-69px)] max-[700px]:w-[calc(100%_-_32px)] max-[700px]:py-[52px]">
         <section
           className="max-[960px]:mx-auto max-[960px]:max-w-[680px] max-[960px]:text-center"
