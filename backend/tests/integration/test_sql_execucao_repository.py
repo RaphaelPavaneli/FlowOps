@@ -212,6 +212,56 @@ def test_historico_isola_equipe_automacao_e_pagina_deterministicamente(
     assert [item.id for item in segunda_pagina] == [UUID(int=1)]
 
 
+def test_busca_ultima_execucao_de_cada_automacao_sem_vazar_equipe(
+    session_factory: sessionmaker[Session],
+) -> None:
+    equipe_id = uuid4()
+    outra_equipe_id = uuid4()
+    automacao_a_id = uuid4()
+    automacao_b_id = uuid4()
+    execucao_a_antiga = criar_execucao(
+        automacao_id=automacao_a_id,
+        equipe_id=equipe_id,
+        status=StatusExecucao.CONCLUIDA,
+    )
+    execucao_a_recente = criar_execucao(
+        automacao_id=automacao_a_id,
+        equipe_id=equipe_id,
+        criada_em=MOMENTO_CRIACAO + timedelta(minutes=2),
+        status=StatusExecucao.FALHOU,
+    )
+    execucao_b = criar_execucao(
+        automacao_id=automacao_b_id,
+        equipe_id=equipe_id,
+        status=StatusExecucao.CANCELADA,
+    )
+    execucao_outra_equipe = criar_execucao(
+        automacao_id=automacao_a_id,
+        equipe_id=outra_equipe_id,
+        criada_em=MOMENTO_CRIACAO + timedelta(minutes=3),
+        status=StatusExecucao.CONCLUIDA,
+    )
+
+    with session_factory() as session:
+        repositorio = SqlExecucaoRepository(session)
+        for execucao in (
+            execucao_a_antiga,
+            execucao_a_recente,
+            execucao_b,
+            execucao_outra_equipe,
+        ):
+            repositorio.salvar(execucao)
+
+        resultado = repositorio.buscar_ultimas_por_automacoes_e_equipe(
+            [automacao_a_id, automacao_b_id, uuid4()],
+            equipe_id,
+        )
+
+    assert set(resultado) == {automacao_a_id, automacao_b_id}
+    assert resultado[automacao_a_id].id == execucao_a_recente.id
+    assert resultado[automacao_b_id].id == execucao_b.id
+
+
 def test_contagem_considera_automacao_e_equipe(
     session_factory: sessionmaker[Session],
 ) -> None:

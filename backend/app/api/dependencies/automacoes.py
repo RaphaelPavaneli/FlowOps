@@ -15,6 +15,9 @@ from app.infrastructure.database.connection import get_db_session
 from app.infrastructure.database.repositories.sql_automacao_repository import (
     SqlAutomacaoRepository,
 )
+from app.infrastructure.database.repositories.sql_execucao_repository import (
+    SqlExecucaoRepository,
+)
 
 
 def get_automacao_repository(
@@ -45,8 +48,13 @@ def get_listar_automacoes(
         EquipeRepository,
         Depends(get_equipe_repository),
     ],
+    session: Annotated[Session, Depends(get_db_session)],
 ) -> ListarAutomacoes:
-    return ListarAutomacoes(automacao_repository, equipe_repository)
+    return ListarAutomacoes(
+        automacao_repository,
+        equipe_repository,
+        SqlExecucaoRepository(session),
+    )
 
 
 def get_alterar_status_automacao(

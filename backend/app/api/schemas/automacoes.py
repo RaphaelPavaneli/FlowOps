@@ -4,6 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.api.schemas.execucoes import ExecucaoResponse
 from app.domain.enums.status_automacao import StatusAutomacao
 from app.domain.enums.resultado_teste_controlado import (
     ResultadoTesteControlado,
@@ -62,9 +63,21 @@ class AutomacaoResponse(BaseModel):
     atualizada_em: datetime
 
 
+class AutomacaoListadaResponse(AutomacaoResponse):
+    ultima_execucao: ExecucaoResponse | None
+
+
+class ResumoAutomacoesResponse(BaseModel):
+    total: int
+    ativas: int
+    pausadas: int
+    rascunhos: int
+
+
 class ListaAutomacoesResponse(BaseModel):
-    automacoes: list[AutomacaoResponse]
+    automacoes: list[AutomacaoListadaResponse]
     pagina: int
     itens_por_pagina: int
     total: int
     total_paginas: int
+    resumo: ResumoAutomacoesResponse

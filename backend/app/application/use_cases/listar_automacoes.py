@@ -4,17 +4,35 @@ from app.application.services.contexto_equipe import (
     obter_equipe_ativa_do_usuario,
 )
 from app.domain.entities.automacao import Automacao
+from app.domain.entities.execucao import Execucao
 from app.domain.entities.usuario import Usuario
+from app.domain.enums.status_automacao import StatusAutomacao
 from app.domain.repositories.automacao_repository import AutomacaoRepository
 from app.domain.repositories.equipe_repository import EquipeRepository
+from app.domain.repositories.execucao_repository import ExecucaoRepository
+
+
+@dataclass(frozen=True, slots=True)
+class AutomacaoListada:
+    automacao: Automacao
+    ultima_execucao: Execucao | None
+
+
+@dataclass(frozen=True, slots=True)
+class ResumoAutomacoes:
+    total: int
+    ativas: int
+    pausadas: int
+    rascunhos: int
 
 
 @dataclass(frozen=True, slots=True)
 class ResultadoListaAutomacoes:
-    automacoes: list[Automacao]
+    automacoes: list[AutomacaoListada]
     pagina: int
     itens_por_pagina: int
     total: int
+    resumo: ResumoAutomacoes
 
 
 class ListarAutomacoes:
@@ -24,9 +42,11 @@ class ListarAutomacoes:
         self,
         automacao_repository: AutomacaoRepository,
         equipe_repository: EquipeRepository,
+        execucao_repository: ExecucaoRepository,
     ) -> None:
         self._automacao_repository = automacao_repository
         self._equipe_repository = equipe_repository
+        self._execucao_repository = execucao_repository
 
     def executar(
         self,
@@ -39,13 +59,36 @@ class ListarAutomacoes:
             self._equipe_repository,
         )
         offset = (pagina - 1) * itens_por_pagina
-        return ResultadoListaAutomacoes(
-            automacoes=self._automacao_repository.listar_por_equipe(
+        automacoes = self._automacao_repository.listar_por_equipe(
+            equipe.id,
+            offset,
+            itens_por_pagina,
+        )
+        ultimas_execucoes = (
+            self._execucao_repository.buscar_ultimas_por_automacoes_e_equipe(
+                [automacao.id for automacao in automacoes],
                 equipe.id,
-                offset,
-                itens_por_pagina,
-            ),
+            )
+        )
+        contagens = self._automacao_repository.contar_por_status_e_equipe(
+            equipe.id
+        )
+        resumo = ResumoAutomacoes(
+            total=sum(contagens.values()),
+            ativas=contagens.get(StatusAutomacao.ATIVA, 0),
+            pausadas=contagens.get(StatusAutomacao.PAUSADA, 0),
+            rascunhos=contagens.get(StatusAutomacao.RASCUNHO, 0),
+        )
+        return ResultadoListaAutomacoes(
+            automacoes=[
+                AutomacaoListada(
+                    automacao=automacao,
+                    ultima_execucao=ultimas_execucoes.get(automacao.id),
+                )
+                for automacao in automacoes
+            ],
             pagina=pagina,
             itens_por_pagina=itens_por_pagina,
-            total=self._automacao_repository.contar_por_equipe(equipe.id),
+            total=resumo.total,
+            resumo=resumo,
         )

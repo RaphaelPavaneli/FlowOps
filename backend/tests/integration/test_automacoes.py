@@ -370,8 +370,20 @@ def test_membros_compartilham_automacoes_sem_vazar_entre_equipes(
     assert [item["id"] for item in colega.json()["automacoes"]] == [
         automacao["id"]
     ]
+    assert colega.json()["resumo"] == {
+        "total": 1,
+        "ativas": 0,
+        "pausadas": 0,
+        "rascunhos": 1,
+    }
     assert externo.status_code == 200
     assert externo.json()["automacoes"] == []
+    assert externo.json()["resumo"] == {
+        "total": 0,
+        "ativas": 0,
+        "pausadas": 0,
+        "rascunhos": 0,
+    }
 
 
 def test_equipe_inativa_bloqueia_criacao_e_listagem(
@@ -421,9 +433,21 @@ def test_listagem_vazia_e_paginacao_funcionam(
         equipe=equipe,
     )
     vazia = client.get("/api/v1/automacoes", headers=headers(token))
-    criar_automacao(client, token, "Automação um")
-    criar_automacao(client, token, "Automação dois")
+    automacao_ativa = criar_automacao(client, token, "Automação um")
+    automacao_pausada = criar_automacao(client, token, "Automação dois")
     criar_automacao(client, token, "Automação três")
+    client.post(
+        f"/api/v1/automacoes/{automacao_ativa['id']}/ativar",
+        headers=headers(token),
+    )
+    client.post(
+        f"/api/v1/automacoes/{automacao_pausada['id']}/ativar",
+        headers=headers(token),
+    )
+    client.post(
+        f"/api/v1/automacoes/{automacao_pausada['id']}/pausar",
+        headers=headers(token),
+    )
 
     response = client.get(
         "/api/v1/automacoes?pagina=1&itens_por_pagina=2",
@@ -432,14 +456,100 @@ def test_listagem_vazia_e_paginacao_funcionam(
 
     assert vazia.status_code == 200
     assert vazia.json()["automacoes"] == []
+    assert vazia.json()["resumo"] == {
+        "total": 0,
+        "ativas": 0,
+        "pausadas": 0,
+        "rascunhos": 0,
+    }
     assert response.status_code == 200
     dados = response.json()
     assert [item["nome"] for item in dados["automacoes"]] == [
         "Automação três",
         "Automação dois",
     ]
+    assert all(
+        item["ultima_execucao"] is None
+        for item in dados["automacoes"]
+    )
     assert dados["total"] == 3
     assert dados["total_paginas"] == 2
+    assert dados["resumo"] == {
+        "total": 3,
+        "ativas": 1,
+        "pausadas": 1,
+        "rascunhos": 1,
+    }
+
+
+def test_listagem_inclui_somente_a_ultima_execucao_da_automacao(
+    client: TestClient,
+    session_factory: sessionmaker[Session],
+) -> None:
+    admin_token = preparar_administrador(client, session_factory)
+    equipe = criar_equipe(client, admin_token, "Equipe Operações")
+    usuario, token = preparar_usuario_com_equipe(
+        client,
+        admin_token,
+        nome="Usuário",
+        email="usuario@email.com",
+        equipe=equipe,
+    )
+    automacao = criar_automacao(client, token, "Automação executada")
+    automacao_sem_execucao = criar_automacao(
+        client,
+        token,
+        "Automação sem execução",
+    )
+    momento_antigo = datetime(2026, 10, 14, 10, tzinfo=timezone.utc)
+    momento_recente = datetime(2026, 10, 14, 11, tzinfo=timezone.utc)
+    execucao_recente_id = uuid4()
+
+    with session_factory() as session:
+        session.add_all(
+            [
+                ExecucaoModel(
+                    id=uuid4(),
+                    automacao_id=UUID(automacao["id"]),
+                    equipe_id=UUID(equipe["id"]),
+                    solicitada_por_usuario_id=UUID(usuario["id"]),
+                    status="concluida",
+                    mensagem_erro=None,
+                    criada_em=momento_antigo,
+                    iniciada_em=momento_antigo,
+                    finalizada_em=momento_antigo,
+                    atualizada_em=momento_antigo,
+                ),
+                ExecucaoModel(
+                    id=execucao_recente_id,
+                    automacao_id=UUID(automacao["id"]),
+                    equipe_id=UUID(equipe["id"]),
+                    solicitada_por_usuario_id=UUID(usuario["id"]),
+                    status="falhou",
+                    mensagem_erro="Falha controlada.",
+                    criada_em=momento_recente,
+                    iniciada_em=momento_recente,
+                    finalizada_em=momento_recente,
+                    atualizada_em=momento_recente,
+                ),
+            ]
+        )
+        session.commit()
+
+    response = client.get("/api/v1/automacoes", headers=headers(token))
+
+    assert response.status_code == 200
+    automacoes = {
+        item["id"]: item
+        for item in response.json()["automacoes"]
+    }
+    ultima_execucao = automacoes[automacao["id"]]["ultima_execucao"]
+    assert ultima_execucao["id"] == str(execucao_recente_id)
+    assert ultima_execucao["status"] == "falhou"
+    assert (
+        automacoes[automacao_sem_execucao["id"]]["ultima_execucao"]
+        is None
+    )
 
 
 def test_dados_invalidos_retorna_422(

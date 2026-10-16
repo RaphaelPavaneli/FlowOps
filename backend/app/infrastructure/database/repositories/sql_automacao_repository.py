@@ -69,12 +69,19 @@ class SqlAutomacaoRepository(AutomacaoRepository):
         ).all()
         return [self._para_entidade(modelo) for modelo in modelos]
 
-    def contar_por_equipe(self, equipe_id: UUID) -> int:
-        return self._session.scalar(
-            select(func.count())
-            .select_from(AutomacaoModel)
+    def contar_por_status_e_equipe(
+        self,
+        equipe_id: UUID,
+    ) -> dict[StatusAutomacao, int]:
+        contagens = self._session.execute(
+            select(AutomacaoModel.status, func.count())
             .where(AutomacaoModel.equipe_id == equipe_id)
-        ) or 0
+            .group_by(AutomacaoModel.status)
+        ).all()
+        return {
+            StatusAutomacao(status): quantidade
+            for status, quantidade in contagens
+        }
 
     def salvar(self, automacao: Automacao) -> Automacao:
         modelo = AutomacaoModel(

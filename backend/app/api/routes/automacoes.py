@@ -11,9 +11,11 @@ from app.api.dependencies.automacoes import (
     get_listar_automacoes,
 )
 from app.api.schemas.automacoes import (
+    AutomacaoListadaResponse,
     AutomacaoResponse,
     CriarAutomacaoRequest,
     ListaAutomacoesResponse,
+    ResumoAutomacoesResponse,
 )
 from app.application.use_cases.alterar_status_automacao import (
     AlterarStatusAutomacao,
@@ -86,13 +88,22 @@ def listar_automacoes(
         raise _erro_contexto_equipe(erro) from erro
     return ListaAutomacoesResponse(
         automacoes=[
-            AutomacaoResponse.model_validate(automacao)
-            for automacao in resultado.automacoes
+            AutomacaoListadaResponse(
+                **AutomacaoResponse.model_validate(
+                    item.automacao
+                ).model_dump(),
+                ultima_execucao=item.ultima_execucao,
+            )
+            for item in resultado.automacoes
         ],
         pagina=resultado.pagina,
         itens_por_pagina=resultado.itens_por_pagina,
         total=resultado.total,
         total_paginas=ceil(resultado.total / resultado.itens_por_pagina),
+        resumo=ResumoAutomacoesResponse.model_validate(
+            resultado.resumo,
+            from_attributes=True,
+        ),
     )
 
 
