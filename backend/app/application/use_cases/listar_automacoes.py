@@ -53,16 +53,26 @@ class ListarAutomacoes:
         usuario: Usuario,
         pagina: int,
         itens_por_pagina: int,
+        busca_nome: str | None = None,
+        status: list[StatusAutomacao] | None = None,
     ) -> ResultadoListaAutomacoes:
         equipe = obter_equipe_ativa_do_usuario(
             usuario,
             self._equipe_repository,
         )
+        busca_nome_normalizado = (
+            " ".join(busca_nome.split()).casefold()
+            if busca_nome and busca_nome.strip()
+            else None
+        )
+        status_selecionados = frozenset(status or ())
         offset = (pagina - 1) * itens_por_pagina
         automacoes = self._automacao_repository.listar_por_equipe(
             equipe.id,
             offset,
             itens_por_pagina,
+            busca_nome_normalizado,
+            status_selecionados,
         )
         ultimas_execucoes = (
             self._execucao_repository.buscar_ultimas_por_automacoes_e_equipe(
@@ -79,6 +89,13 @@ class ListarAutomacoes:
             pausadas=contagens.get(StatusAutomacao.PAUSADA, 0),
             rascunhos=contagens.get(StatusAutomacao.RASCUNHO, 0),
         )
+        total_filtrado = (
+            self._automacao_repository.contar_filtradas_por_equipe(
+                equipe.id,
+                busca_nome_normalizado,
+                status_selecionados,
+            )
+        )
         return ResultadoListaAutomacoes(
             automacoes=[
                 AutomacaoListada(
@@ -89,6 +106,6 @@ class ListarAutomacoes:
             ],
             pagina=pagina,
             itens_por_pagina=itens_por_pagina,
-            total=resumo.total,
+            total=total_filtrado,
             resumo=resumo,
         )

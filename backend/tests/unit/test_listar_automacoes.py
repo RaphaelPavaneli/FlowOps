@@ -77,6 +77,7 @@ def test_listagem_associa_ultima_execucao_sem_alterar_entidade_automacao() -> No
     execucao_repository = Mock(spec=ExecucaoRepository)
     equipe_repository.buscar_por_id.return_value = equipe
     automacao_repository.listar_por_equipe.return_value = [automacao]
+    automacao_repository.contar_filtradas_por_equipe.return_value = 1
     automacao_repository.contar_por_status_e_equipe.return_value = {
         StatusAutomacao.ATIVA: 1,
         StatusAutomacao.PAUSADA: 2,
@@ -90,17 +91,36 @@ def test_listagem_associa_ultima_execucao_sem_alterar_entidade_automacao() -> No
         execucao_repository,
     )
 
-    resultado = caso_de_uso.executar(usuario, pagina=1, itens_por_pagina=20)
+    resultado = caso_de_uso.executar(
+        usuario,
+        pagina=1,
+        itens_por_pagina=20,
+        busca_nome="  AUTOMAÇÃO  ",
+        status=[StatusAutomacao.ATIVA],
+    )
 
     assert resultado.automacoes[0].automacao is automacao
     assert resultado.automacoes[0].ultima_execucao is execucao
-    assert resultado.total == 3
+    assert resultado.total == 1
     assert resultado.resumo.total == 3
     assert resultado.resumo.ativas == 1
     assert resultado.resumo.pausadas == 2
     assert resultado.resumo.rascunhos == 0
     automacao_repository.contar_por_status_e_equipe.assert_called_once_with(
         equipe_id
+    )
+    filtros_status = frozenset({StatusAutomacao.ATIVA})
+    automacao_repository.listar_por_equipe.assert_called_once_with(
+        equipe_id,
+        0,
+        20,
+        "automação",
+        filtros_status,
+    )
+    automacao_repository.contar_filtradas_por_equipe.assert_called_once_with(
+        equipe_id,
+        "automação",
+        filtros_status,
     )
     buscar_ultimas = (
         execucao_repository.buscar_ultimas_por_automacoes_e_equipe

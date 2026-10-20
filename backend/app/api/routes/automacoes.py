@@ -23,6 +23,7 @@ from app.application.use_cases.alterar_status_automacao import (
 from app.application.use_cases.criar_automacao import CriarAutomacao
 from app.application.use_cases.listar_automacoes import ListarAutomacoes
 from app.domain.entities.usuario import Usuario
+from app.domain.enums.status_automacao import StatusAutomacao
 from app.domain.exceptions.automacoes import (
     AutomacaoNaoEncontradaError,
     AutomacaoNomeDuplicadoError,
@@ -77,12 +78,19 @@ def listar_automacoes(
     ],
     pagina: Annotated[int, Query(ge=1)] = 1,
     itens_por_pagina: Annotated[int, Query(ge=1, le=100)] = 20,
+    busca: Annotated[str | None, Query(max_length=120)] = None,
+    status_filtro: Annotated[
+        list[StatusAutomacao] | None,
+        Query(alias="status"),
+    ] = None,
 ) -> ListaAutomacoesResponse:
     try:
         resultado = caso_de_uso.executar(
             usuario,
             pagina,
             itens_por_pagina,
+            busca,
+            status_filtro,
         )
     except (UsuarioSemEquipeError, EquipeUsuarioIndisponivelError) as erro:
         raise _erro_contexto_equipe(erro) from erro

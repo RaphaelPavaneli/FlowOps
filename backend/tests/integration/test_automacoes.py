@@ -552,6 +552,81 @@ def test_listagem_inclui_somente_a_ultima_execucao_da_automacao(
     )
 
 
+def test_listagem_filtra_por_nome_e_combina_status_sem_alterar_resumo(
+    client: TestClient,
+    session_factory: sessionmaker[Session],
+) -> None:
+    admin_token = preparar_administrador(client, session_factory)
+    equipe = criar_equipe(client, admin_token, "Equipe Operações")
+    _, token = preparar_usuario_com_equipe(
+        client,
+        admin_token,
+        nome="Usuário",
+        email="usuario@email.com",
+        equipe=equipe,
+    )
+    automacao_rascunho = criar_automacao(
+        client,
+        token,
+        "Enviar relatório diário",
+    )
+    automacao_pausada = criar_automacao(
+        client,
+        token,
+        "Relatório mensal",
+    )
+    automacao_ativa = criar_automacao(
+        client,
+        token,
+        "Sincronizar pedidos",
+    )
+    client.post(
+        f"/api/v1/automacoes/{automacao_pausada['id']}/ativar",
+        headers=headers(token),
+    )
+    client.post(
+        f"/api/v1/automacoes/{automacao_pausada['id']}/pausar",
+        headers=headers(token),
+    )
+    client.post(
+        f"/api/v1/automacoes/{automacao_ativa['id']}/ativar",
+        headers=headers(token),
+    )
+
+    response = client.get(
+        "/api/v1/automacoes",
+        params=[
+            ("pagina", "1"),
+            ("itens_por_pagina", "1"),
+            ("busca", "  RELATÓRIO  "),
+            ("status", "rascunho"),
+            ("status", "pausada"),
+        ],
+        headers=headers(token),
+    )
+    status_invalido = client.get(
+        "/api/v1/automacoes?status=inexistente",
+        headers=headers(token),
+    )
+
+    assert response.status_code == 200
+    dados = response.json()
+    assert len(dados["automacoes"]) == 1
+    assert dados["automacoes"][0]["id"] in {
+        automacao_rascunho["id"],
+        automacao_pausada["id"],
+    }
+    assert dados["total"] == 2
+    assert dados["total_paginas"] == 2
+    assert dados["resumo"] == {
+        "total": 3,
+        "ativas": 1,
+        "pausadas": 1,
+        "rascunhos": 1,
+    }
+    assert status_invalido.status_code == 422
+
+
 def test_dados_invalidos_retorna_422(
     client: TestClient,
     session_factory: sessionmaker[Session],

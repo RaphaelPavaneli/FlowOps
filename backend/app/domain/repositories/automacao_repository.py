@@ -30,8 +30,19 @@ class AutomacaoRepository(ABC):
         equipe_id: UUID,
         offset: int,
         limite: int,
+        busca_nome_normalizado: str | None = None,
+        status: frozenset[StatusAutomacao] = frozenset(),
     ) -> list[Automacao]:
         """Lista somente as automações da equipe informada."""
+
+    @abstractmethod
+    def contar_filtradas_por_equipe(
+        self,
+        equipe_id: UUID,
+        busca_nome_normalizado: str | None = None,
+        status: frozenset[StatusAutomacao] = frozenset(),
+    ) -> int:
+        """Conta as automações da equipe que atendem aos filtros."""
 
     @abstractmethod
     def contar_por_status_e_equipe(

@@ -2,6 +2,7 @@ import type {
   Automacao,
   CriarAutomacaoRequest,
   ListaAutomacoesResponse,
+  StatusAutomacao,
 } from "../types/automacoes";
 
 interface RespostaErroApi {
@@ -22,14 +23,27 @@ export class ErroAutomacoes extends Error {
   }
 }
 
+interface FiltrosAutomacoes {
+  busca?: string;
+  status?: StatusAutomacao[];
+}
+
 export async function listarAutomacoes(
   token: string,
   pagina: number,
   itensPorPagina = 20,
+  filtros: FiltrosAutomacoes = {},
 ): Promise<ListaAutomacoesResponse> {
   const parametros = new URLSearchParams({
     pagina: String(pagina),
     itens_por_pagina: String(itensPorPagina),
+  });
+  const busca = filtros.busca?.trim();
+  if (busca) {
+    parametros.set("busca", busca);
+  }
+  filtros.status?.forEach((status) => {
+    parametros.append("status", status);
   });
 
   let resposta: Response;

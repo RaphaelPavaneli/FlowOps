@@ -1,16 +1,19 @@
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import {
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clock3,
   FilePlus2,
+  Filter,
   History,
   LoaderCircle,
   Pause,
   Play,
   Plus,
   RefreshCw,
+  Search,
   Workflow,
   X,
 } from "lucide-react";
@@ -73,6 +76,11 @@ const STATUS_EXECUCAO_ATIVOS = new Set<StatusExecucao>([
   "pendente",
   "processando",
 ]);
+const STATUS_AUTOMACAO_DISPONIVEIS: StatusAutomacao[] = [
+  "ativa",
+  "pausada",
+  "rascunho",
+];
 
 function formatarData(data: string) {
   return new Intl.DateTimeFormat("pt-BR", {
@@ -174,6 +182,12 @@ function FaixaResumoAutomacoes({ resumo }: { resumo: ResumoAutomacoes }) {
 export function PaginaAutomacoes() {
   const { token, usuario, sair } = useAutenticacao();
   const [pagina, setPagina] = useState(1);
+  const [buscaDigitada, setBuscaDigitada] = useState("");
+  const [buscaAplicada, setBuscaAplicada] = useState("");
+  const [statusSelecionados, setStatusSelecionados] = useState<
+    StatusAutomacao[]
+  >([]);
+  const [filtroStatusAberto, setFiltroStatusAberto] = useState(false);
   const [resultado, setResultado] = useState<ListaAutomacoesResponse | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
@@ -193,10 +207,55 @@ export function PaginaAutomacoes() {
     tipo: "sucesso" | "erro";
     texto: string;
   } | null>(null);
+  const filtroStatusRef = useRef<HTMLDivElement>(null);
+  const botaoFiltroStatusRef = useRef<HTMLButtonElement>(null);
+  const requisicaoAtualRef = useRef(0);
+  const requisicaoCarregamentoRef = useRef(0);
 
   useEffect(() => {
     document.title = "Automações | FlowOps";
   }, []);
+
+  useEffect(() => {
+    const temporizador = window.setTimeout(() => {
+      const buscaNormalizada = buscaDigitada.trim().replace(/\s+/g, " ");
+      if (buscaNormalizada === buscaAplicada) {
+        return;
+      }
+      setPagina(1);
+      setBuscaAplicada(buscaNormalizada);
+    }, 350);
+
+    return () => window.clearTimeout(temporizador);
+  }, [buscaDigitada, buscaAplicada]);
+
+  useEffect(() => {
+    if (!filtroStatusAberto) {
+      return;
+    }
+
+    const fecharAoClicarFora = (evento: PointerEvent) => {
+      if (
+        filtroStatusRef.current &&
+        !filtroStatusRef.current.contains(evento.target as Node)
+      ) {
+        setFiltroStatusAberto(false);
+      }
+    };
+    const fecharComEscape = (evento: KeyboardEvent) => {
+      if (evento.key === "Escape") {
+        setFiltroStatusAberto(false);
+        botaoFiltroStatusRef.current?.focus();
+      }
+    };
+
+    document.addEventListener("pointerdown", fecharAoClicarFora);
+    document.addEventListener("keydown", fecharComEscape);
+    return () => {
+      document.removeEventListener("pointerdown", fecharAoClicarFora);
+      document.removeEventListener("keydown", fecharComEscape);
+    };
+  }, [filtroStatusAberto]);
 
   const carregarAutomacoes = useCallback(async (silencioso = false) => {
     if (!token || !usuario?.equipe_id) {
@@ -206,22 +265,34 @@ export function PaginaAutomacoes() {
       return;
     }
 
+    const requisicaoAtual = ++requisicaoAtualRef.current;
+
     if (!silencioso) {
+      requisicaoCarregamentoRef.current = requisicaoAtual;
       setCarregando(true);
       setErro("");
     }
 
     try {
-      setResultado(
-        await listarAutomacoes(token, pagina, ITENS_POR_PAGINA),
+      const novoResultado = await listarAutomacoes(
+        token,
+        pagina,
+        ITENS_POR_PAGINA,
+        {
+          busca: buscaAplicada,
+          status: statusSelecionados,
+        },
       );
+      if (requisicaoAtual === requisicaoAtualRef.current) {
+        setResultado(novoResultado);
+      }
     } catch (falha) {
       if (falha instanceof ErroAutomacoes && falha.status === 401) {
         sair();
         return;
       }
 
-      if (!silencioso) {
+      if (!silencioso && requisicaoAtual === requisicaoAtualRef.current) {
         setErro(
           falha instanceof ErroAutomacoes
             ? falha.message
@@ -229,11 +300,21 @@ export function PaginaAutomacoes() {
         );
       }
     } finally {
-      if (!silencioso) {
+      if (
+        !silencioso &&
+        requisicaoAtual === requisicaoCarregamentoRef.current
+      ) {
         setCarregando(false);
       }
     }
-  }, [token, usuario?.equipe_id, pagina, sair]);
+  }, [
+    token,
+    usuario?.equipe_id,
+    pagina,
+    buscaAplicada,
+    statusSelecionados,
+    sair,
+  ]);
 
   useEffect(() => {
     void carregarAutomacoes();
@@ -246,7 +327,7 @@ export function PaginaAutomacoes() {
   );
 
   useEffect(() => {
-    if (!possuiExecucaoAtiva) {
+    if (!possuiExecucaoAtiva || carregando) {
       return;
     }
 
@@ -255,7 +336,7 @@ export function PaginaAutomacoes() {
     }, 3000);
 
     return () => window.clearInterval(intervalo);
-  }, [carregarAutomacoes, possuiExecucaoAtiva]);
+  }, [carregarAutomacoes, possuiExecucaoAtiva, carregando]);
 
   function fecharFormulario() {
     if (salvando) {
@@ -432,7 +513,31 @@ export function PaginaAutomacoes() {
     }
   }
 
+  function alternarStatusFiltro(status: StatusAutomacao) {
+    setPagina(1);
+    setStatusSelecionados((atuais) =>
+      atuais.includes(status)
+        ? atuais.filter((item) => item !== status)
+        : [...atuais, status],
+    );
+  }
+
+  function limparBusca() {
+    setBuscaDigitada("");
+    setBuscaAplicada("");
+    setPagina(1);
+  }
+
+  function limparFiltros() {
+    setBuscaDigitada("");
+    setBuscaAplicada("");
+    setStatusSelecionados([]);
+    setFiltroStatusAberto(false);
+    setPagina(1);
+  }
+
   const totalPaginas = Math.max(resultado?.total_paginas ?? 1, 1);
+  const filtrosAtivos = buscaAplicada !== "" || statusSelecionados.length > 0;
 
   if (usuario?.equipe_id === null) {
     return (
@@ -627,6 +732,105 @@ export function PaginaAutomacoes() {
           </div>
         )}
 
+        <section
+          className="mb-4 flex items-center gap-2.5 max-[640px]:flex-wrap"
+          aria-label="Busca e filtros de automações"
+        >
+          <div className="relative min-w-0 flex-1 max-[640px]:w-full max-[640px]:flex-none">
+            <Search
+              className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-[#7b8798]"
+              size={16}
+              aria-hidden="true"
+            />
+            <input
+              className="min-h-10 w-full rounded-lg border border-[#d6dde7] bg-white pr-10 pl-9 text-[13px] text-flowops-texto outline-none transition-colors placeholder:text-[#939eae] focus:border-flowops-500 focus:ring-2 focus:ring-flowops-100"
+              type="search"
+              value={buscaDigitada}
+              maxLength={120}
+              aria-label="Buscar automação por nome"
+              placeholder="Buscar por nome"
+              onChange={(evento) => setBuscaDigitada(evento.target.value)}
+            />
+            {buscaDigitada && (
+              <button
+                className="absolute top-1/2 right-2 grid size-7 -translate-y-1/2 cursor-pointer place-items-center rounded-md border-0 bg-transparent text-[#7b8798] hover:bg-[#f1f4f8] hover:text-flowops-texto"
+                type="button"
+                aria-label="Limpar busca"
+                onClick={limparBusca}
+              >
+                <X size={15} aria-hidden="true" />
+              </button>
+            )}
+          </div>
+
+          <div className="relative" ref={filtroStatusRef}>
+            <button
+              className={`inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border bg-white px-3.5 text-xs font-semibold transition-colors ${
+                statusSelecionados.length > 0
+                  ? "border-flowops-400 text-flowops-700"
+                  : "border-[#d6dde7] text-[#526077] hover:border-[#b8c6d9] hover:text-flowops-700"
+              }`}
+              type="button"
+              ref={botaoFiltroStatusRef}
+              aria-expanded={filtroStatusAberto}
+              aria-controls="filtros-status-automacoes"
+              onClick={() => setFiltroStatusAberto((aberto) => !aberto)}
+            >
+              <Filter size={15} aria-hidden="true" />
+              Status
+              {statusSelecionados.length > 0 && (
+                <span className="grid size-5 place-items-center rounded-full bg-flowops-700 text-[10px] font-bold text-white">
+                  {statusSelecionados.length}
+                </span>
+              )}
+              <ChevronDown
+                className={`transition-transform ${
+                  filtroStatusAberto ? "rotate-180" : ""
+                }`}
+                size={14}
+                aria-hidden="true"
+              />
+            </button>
+
+            {filtroStatusAberto && (
+              <div
+                className="absolute top-[calc(100%_+_6px)] right-0 z-30 w-48 rounded-lg border border-[#d8e0ea] bg-white p-2 shadow-[0_10px_28px_rgba(15,39,73,0.14)]"
+                id="filtros-status-automacoes"
+                role="group"
+                aria-label="Filtrar por status"
+              >
+                <span className="block px-2 py-1.5 text-[10px] font-bold tracking-[0.06em] text-[#7a8799] uppercase">
+                  Filtrar por status
+                </span>
+                {STATUS_AUTOMACAO_DISPONIVEIS.map((status) => (
+                  <label
+                    className="flex min-h-9 cursor-pointer items-center gap-2.5 rounded-md px-2 text-xs font-medium text-[#3f4d62] hover:bg-[#f4f7fb]"
+                    key={status}
+                  >
+                    <input
+                      className="size-4 accent-flowops-700"
+                      type="checkbox"
+                      checked={statusSelecionados.includes(status)}
+                      onChange={() => alternarStatusFiltro(status)}
+                    />
+                    {rotulosStatus[status]}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {filtrosAtivos && (
+            <button
+              className="inline-flex min-h-10 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent px-2 text-xs font-semibold text-[#647287] hover:text-flowops-700"
+              type="button"
+              onClick={limparFiltros}
+            >
+              Limpar filtros
+            </button>
+          )}
+        </section>
+
         {carregando && (
           <section
             className="flex min-h-[260px] flex-col items-center justify-center gap-3 rounded-[10px] border border-[#dfe5ec] bg-white text-center text-flowops-cinza"
@@ -661,22 +865,40 @@ export function PaginaAutomacoes() {
         {!carregando && !erro && resultado?.automacoes.length === 0 && (
           <section className="flex min-h-[260px] flex-col items-center justify-center gap-3 rounded-[10px] border border-[#dfe5ec] bg-white p-8 text-center">
             <span className="grid size-11 place-items-center rounded-lg bg-flowops-50 text-flowops-700">
-              <Workflow size={22} aria-hidden="true" />
+              {filtrosAtivos ? (
+                <Search size={22} aria-hidden="true" />
+              ) : (
+                <Workflow size={22} aria-hidden="true" />
+              )}
             </span>
             <h2 className="m-0 text-[17px] text-flowops-texto">
-              Nenhuma automação cadastrada
+              {filtrosAtivos
+                ? "Nenhuma automação encontrada"
+                : "Nenhuma automação cadastrada"}
             </h2>
             <p className="m-0 max-w-[480px] text-[13px] leading-[1.6] text-flowops-cinza">
-              Crie a primeira automação para que ela fique disponível para a sua equipe.
+              {filtrosAtivos
+                ? "Tente outro nome ou ajuste os status selecionados."
+                : "Crie a primeira automação para que ela fique disponível para a sua equipe."}
             </p>
-            <button
-              className="mt-1 inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-[#cfddf4] bg-white px-4 text-xs font-semibold text-flowops-700 hover:bg-flowops-50"
-              type="button"
-              onClick={() => setFormularioAberto(true)}
-            >
-              <Plus size={16} aria-hidden="true" />
-              Criar primeira automação
-            </button>
+            {filtrosAtivos ? (
+              <button
+                className="mt-1 inline-flex min-h-10 cursor-pointer items-center justify-center rounded-lg border border-[#cfddf4] bg-white px-4 text-xs font-semibold text-flowops-700 hover:bg-flowops-50"
+                type="button"
+                onClick={limparFiltros}
+              >
+                Limpar filtros
+              </button>
+            ) : (
+              <button
+                className="mt-1 inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-[#cfddf4] bg-white px-4 text-xs font-semibold text-flowops-700 hover:bg-flowops-50"
+                type="button"
+                onClick={() => setFormularioAberto(true)}
+              >
+                <Plus size={16} aria-hidden="true" />
+                Criar primeira automação
+              </button>
+            )}
           </section>
         )}
 
