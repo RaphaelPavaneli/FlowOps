@@ -262,6 +262,88 @@ def test_busca_ultima_execucao_de_cada_automacao_sem_vazar_equipe(
     assert resultado[automacao_b_id].id == execucao_b.id
 
 
+def test_busca_falha_mais_recente_somente_quando_ultima_execucao_falhou(
+    session_factory: sessionmaker[Session],
+) -> None:
+    equipe_id = uuid4()
+    outra_equipe_id = uuid4()
+    automacao_resolvida_id = uuid4()
+    automacao_com_falha_id = uuid4()
+    falha_resolvida = criar_execucao(
+        automacao_id=automacao_resolvida_id,
+        equipe_id=equipe_id,
+        status=StatusExecucao.FALHOU,
+    )
+    sucesso_posterior = criar_execucao(
+        automacao_id=automacao_resolvida_id,
+        equipe_id=equipe_id,
+        criada_em=MOMENTO_CRIACAO + timedelta(minutes=1),
+        status=StatusExecucao.CONCLUIDA,
+    )
+    falha_atual = criar_execucao(
+        automacao_id=automacao_com_falha_id,
+        equipe_id=equipe_id,
+        criada_em=MOMENTO_CRIACAO + timedelta(minutes=2),
+        status=StatusExecucao.FALHOU,
+    )
+    falha_outra_equipe = criar_execucao(
+        automacao_id=uuid4(),
+        equipe_id=outra_equipe_id,
+        criada_em=MOMENTO_CRIACAO + timedelta(minutes=3),
+        status=StatusExecucao.FALHOU,
+    )
+
+    with session_factory() as session:
+        repositorio = SqlExecucaoRepository(session)
+        for execucao in (
+            falha_resolvida,
+            sucesso_posterior,
+            falha_atual,
+            falha_outra_equipe,
+        ):
+            repositorio.salvar(execucao)
+
+        resultado = (
+            repositorio
+            .buscar_falha_mais_recente_entre_ultimas_por_equipe(equipe_id)
+        )
+
+    assert resultado is not None
+    assert resultado.id == falha_atual.id
+
+
+def test_busca_falha_retorna_none_quando_falha_foi_resolvida(
+    session_factory: sessionmaker[Session],
+) -> None:
+    equipe_id = uuid4()
+    automacao_id = uuid4()
+
+    with session_factory() as session:
+        repositorio = SqlExecucaoRepository(session)
+        repositorio.salvar(
+            criar_execucao(
+                automacao_id=automacao_id,
+                equipe_id=equipe_id,
+                status=StatusExecucao.FALHOU,
+            )
+        )
+        repositorio.salvar(
+            criar_execucao(
+                automacao_id=automacao_id,
+                equipe_id=equipe_id,
+                criada_em=MOMENTO_CRIACAO + timedelta(minutes=1),
+                status=StatusExecucao.CONCLUIDA,
+            )
+        )
+
+        resultado = (
+            repositorio
+            .buscar_falha_mais_recente_entre_ultimas_por_equipe(equipe_id)
+        )
+
+    assert resultado is None
+
+
 def test_contagem_considera_automacao_e_equipe(
     session_factory: sessionmaker[Session],
 ) -> None:

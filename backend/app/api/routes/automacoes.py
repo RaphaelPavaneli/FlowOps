@@ -11,6 +11,7 @@ from app.api.dependencies.automacoes import (
     get_listar_automacoes,
 )
 from app.api.schemas.automacoes import (
+    AlertaFalhaAutomacaoResponse,
     AutomacaoListadaResponse,
     AutomacaoResponse,
     CriarAutomacaoRequest,
@@ -111,6 +112,14 @@ def listar_automacoes(
         resumo=ResumoAutomacoesResponse.model_validate(
             resultado.resumo,
             from_attributes=True,
+        ),
+        alerta_falha=(
+            AlertaFalhaAutomacaoResponse.model_validate(
+                resultado.alerta_falha,
+                from_attributes=True,
+            )
+            if resultado.alerta_falha
+            else None
         ),
     )
 

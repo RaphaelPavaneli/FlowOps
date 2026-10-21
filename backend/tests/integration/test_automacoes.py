@@ -376,6 +376,7 @@ def test_membros_compartilham_automacoes_sem_vazar_entre_equipes(
         "pausadas": 0,
         "rascunhos": 1,
     }
+    assert colega.json()["alerta_falha"] is None
     assert externo.status_code == 200
     assert externo.json()["automacoes"] == []
     assert externo.json()["resumo"] == {
@@ -384,6 +385,7 @@ def test_membros_compartilham_automacoes_sem_vazar_entre_equipes(
         "pausadas": 0,
         "rascunhos": 0,
     }
+    assert externo.json()["alerta_falha"] is None
 
 
 def test_equipe_inativa_bloqueia_criacao_e_listagem(
@@ -546,10 +548,40 @@ def test_listagem_inclui_somente_a_ultima_execucao_da_automacao(
     ultima_execucao = automacoes[automacao["id"]]["ultima_execucao"]
     assert ultima_execucao["id"] == str(execucao_recente_id)
     assert ultima_execucao["status"] == "falhou"
+    alerta_falha = response.json()["alerta_falha"]
+    assert alerta_falha["automacao_id"] == automacao["id"]
+    assert alerta_falha["automacao_nome"] == "Automação executada"
+    assert alerta_falha["execucao_id"] == str(execucao_recente_id)
     assert (
         automacoes[automacao_sem_execucao["id"]]["ultima_execucao"]
         is None
     )
+
+    momento_resolvido = datetime(2026, 10, 14, 12, tzinfo=timezone.utc)
+    with session_factory() as session:
+        session.add(
+            ExecucaoModel(
+                id=uuid4(),
+                automacao_id=UUID(automacao["id"]),
+                equipe_id=UUID(equipe["id"]),
+                solicitada_por_usuario_id=UUID(usuario["id"]),
+                status="concluida",
+                mensagem_erro=None,
+                criada_em=momento_resolvido,
+                iniciada_em=momento_resolvido,
+                finalizada_em=momento_resolvido,
+                atualizada_em=momento_resolvido,
+            )
+        )
+        session.commit()
+
+    resposta_resolvida = client.get(
+        "/api/v1/automacoes",
+        headers=headers(token),
+    )
+
+    assert resposta_resolvida.status_code == 200
+    assert resposta_resolvida.json()["alerta_falha"] is None
 
 
 def test_listagem_filtra_por_nome_e_combina_status_sem_alterar_resumo(

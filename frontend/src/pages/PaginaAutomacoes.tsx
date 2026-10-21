@@ -14,6 +14,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  TriangleAlert,
   Workflow,
   X,
 } from "lucide-react";
@@ -620,6 +621,39 @@ export function PaginaAutomacoes() {
 
         {!carregando && !erro && resultado && (
           <FaixaResumoAutomacoes resumo={resultado.resumo} />
+        )}
+
+        {!carregando && !erro && resultado?.alerta_falha && (
+          <aside
+            className="mb-4 flex items-center justify-between gap-4 rounded-lg border border-[#efd6d2] bg-[#fff8f7] px-4 py-3 max-[640px]:items-start max-[640px]:flex-col"
+            aria-label="Automação com falha na última execução"
+          >
+            <div className="flex min-w-0 items-start gap-3">
+              <TriangleAlert
+                className="mt-0.5 shrink-0 text-[#a13a32]"
+                size={18}
+                aria-hidden="true"
+              />
+              <div className="min-w-0">
+                <p className="m-0 text-[13px] font-bold text-[#7f302b]">
+                  Uma automação precisa de atenção
+                </p>
+                <p className="mt-1 mb-0 text-xs leading-5 text-[#765754]">
+                  <span className="font-semibold text-[#5f3b38]">
+                    {resultado.alerta_falha.automacao_nome}
+                  </span>{" "}
+                  falhou na última execução em{" "}
+                  {formatarData(resultado.alerta_falha.ocorrida_em)}.
+                </p>
+              </div>
+            </div>
+            <Link
+              className="shrink-0 text-xs font-bold text-flowops-700 no-underline hover:text-flowops-800 focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-flowops-500"
+              to={`/app/automacoes/${resultado.alerta_falha.automacao_id}/execucoes`}
+            >
+              Consultar histórico
+            </Link>
+          </aside>
         )}
 
         {formularioAberto && (

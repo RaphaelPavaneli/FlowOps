@@ -65,8 +65,8 @@ def test_listagem_associa_ultima_execucao_sem_alterar_entidade_automacao() -> No
         automacao_id=automacao_id,
         equipe_id=equipe_id,
         solicitada_por_usuario_id=usuario_id,
-        status=StatusExecucao.CONCLUIDA,
-        mensagem_erro=None,
+        status=StatusExecucao.FALHOU,
+        mensagem_erro="Falha controlada.",
         criada_em=MOMENTO,
         iniciada_em=MOMENTO,
         finalizada_em=MOMENTO,
@@ -85,6 +85,12 @@ def test_listagem_associa_ultima_execucao_sem_alterar_entidade_automacao() -> No
     execucao_repository.buscar_ultimas_por_automacoes_e_equipe.return_value = {
         automacao_id: execucao
     }
+    buscar_falha = (
+        execucao_repository
+        .buscar_falha_mais_recente_entre_ultimas_por_equipe
+    )
+    buscar_falha.return_value = execucao
+    automacao_repository.buscar_por_id_e_equipe.return_value = automacao
     caso_de_uso = ListarAutomacoes(
         automacao_repository,
         equipe_repository,
@@ -106,6 +112,11 @@ def test_listagem_associa_ultima_execucao_sem_alterar_entidade_automacao() -> No
     assert resultado.resumo.ativas == 1
     assert resultado.resumo.pausadas == 2
     assert resultado.resumo.rascunhos == 0
+    assert resultado.alerta_falha is not None
+    assert resultado.alerta_falha.automacao_id == automacao_id
+    assert resultado.alerta_falha.automacao_nome == "Automação"
+    assert resultado.alerta_falha.execucao_id == execucao.id
+    assert resultado.alerta_falha.ocorrida_em == MOMENTO
     automacao_repository.contar_por_status_e_equipe.assert_called_once_with(
         equipe_id
     )
@@ -127,4 +138,9 @@ def test_listagem_associa_ultima_execucao_sem_alterar_entidade_automacao() -> No
     )
     buscar_ultimas.assert_called_once_with(
         [automacao_id], equipe_id
+    )
+    buscar_falha.assert_called_once_with(equipe_id)
+    automacao_repository.buscar_por_id_e_equipe.assert_called_once_with(
+        automacao_id,
+        equipe_id,
     )

@@ -205,6 +205,43 @@ class SqlExecucaoRepository(ExecucaoRepository):
             for modelo in modelos
         }
 
+    def buscar_falha_mais_recente_entre_ultimas_por_equipe(
+        self,
+        equipe_id: UUID,
+    ) -> Execucao | None:
+        posicao = func.row_number().over(
+            partition_by=ExecucaoModel.automacao_id,
+            order_by=(
+                ExecucaoModel.criada_em.desc(),
+                ExecucaoModel.id,
+            ),
+        )
+        execucoes_ordenadas = (
+            select(
+                ExecucaoModel.id.label("execucao_id"),
+                posicao.label("posicao"),
+            )
+            .where(ExecucaoModel.equipe_id == equipe_id)
+            .subquery()
+        )
+        modelo = self._session.scalar(
+            select(ExecucaoModel)
+            .join(
+                execucoes_ordenadas,
+                ExecucaoModel.id == execucoes_ordenadas.c.execucao_id,
+            )
+            .where(
+                execucoes_ordenadas.c.posicao == 1,
+                ExecucaoModel.status == StatusExecucao.FALHOU.value,
+            )
+            .order_by(
+                ExecucaoModel.criada_em.desc(),
+                ExecucaoModel.id,
+            )
+            .limit(1)
+        )
+        return self._para_entidade(modelo) if modelo else None
+
     def contar_por_automacao_e_equipe(
         self,
         automacao_id: UUID,

@@ -29,6 +29,13 @@ export interface ResumoAutomacoes {
   rascunhos: number;
 }
 
+export interface AlertaFalhaAutomacao {
+  automacao_id: string;
+  automacao_nome: string;
+  execucao_id: string;
+  ocorrida_em: string;
+}
+
 export interface ListaAutomacoesResponse {
   automacoes: AutomacaoListada[];
   pagina: number;
@@ -36,4 +43,5 @@ export interface ListaAutomacoesResponse {
   total: number;
   total_paginas: number;
   resumo: ResumoAutomacoes;
+  alerta_falha: AlertaFalhaAutomacao | null;
 }

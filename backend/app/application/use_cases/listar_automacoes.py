@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+from datetime import datetime
+from uuid import UUID
 
 from app.application.services.contexto_equipe import (
     obter_equipe_ativa_do_usuario,
@@ -27,12 +29,21 @@ class ResumoAutomacoes:
 
 
 @dataclass(frozen=True, slots=True)
+class AlertaFalhaAutomacao:
+    automacao_id: UUID
+    automacao_nome: str
+    execucao_id: UUID
+    ocorrida_em: datetime
+
+
+@dataclass(frozen=True, slots=True)
 class ResultadoListaAutomacoes:
     automacoes: list[AutomacaoListada]
     pagina: int
     itens_por_pagina: int
     total: int
     resumo: ResumoAutomacoes
+    alerta_falha: AlertaFalhaAutomacao | None
 
 
 class ListarAutomacoes:
@@ -89,6 +100,31 @@ class ListarAutomacoes:
             pausadas=contagens.get(StatusAutomacao.PAUSADA, 0),
             rascunhos=contagens.get(StatusAutomacao.RASCUNHO, 0),
         )
+        execucao_com_falha = (
+            self._execucao_repository
+            .buscar_falha_mais_recente_entre_ultimas_por_equipe(equipe.id)
+        )
+        automacao_com_falha = (
+            self._automacao_repository.buscar_por_id_e_equipe(
+                execucao_com_falha.automacao_id,
+                equipe.id,
+            )
+            if execucao_com_falha
+            else None
+        )
+        alerta_falha = (
+            AlertaFalhaAutomacao(
+                automacao_id=automacao_com_falha.id,
+                automacao_nome=automacao_com_falha.nome,
+                execucao_id=execucao_com_falha.id,
+                ocorrida_em=(
+                    execucao_com_falha.finalizada_em
+                    or execucao_com_falha.atualizada_em
+                ),
+            )
+            if execucao_com_falha and automacao_com_falha
+            else None
+        )
         total_filtrado = (
             self._automacao_repository.contar_filtradas_por_equipe(
                 equipe.id,
@@ -108,4 +144,5 @@ class ListarAutomacoes:
             itens_por_pagina=itens_por_pagina,
             total=total_filtrado,
             resumo=resumo,
+            alerta_falha=alerta_falha,
         )

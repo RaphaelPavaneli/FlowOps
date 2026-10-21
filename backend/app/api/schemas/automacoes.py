@@ -74,6 +74,13 @@ class ResumoAutomacoesResponse(BaseModel):
     rascunhos: int
 
 
+class AlertaFalhaAutomacaoResponse(BaseModel):
+    automacao_id: UUID
+    automacao_nome: str
+    execucao_id: UUID
+    ocorrida_em: datetime
+
+
 class ListaAutomacoesResponse(BaseModel):
     automacoes: list[AutomacaoListadaResponse]
     pagina: int
@@ -81,3 +88,4 @@ class ListaAutomacoesResponse(BaseModel):
     total: int
     total_paginas: int
     resumo: ResumoAutomacoesResponse
+    alerta_falha: AlertaFalhaAutomacaoResponse | None
