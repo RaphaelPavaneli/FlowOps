@@ -55,6 +55,21 @@ class ExecucaoRepository(ABC):
         """Lista o histórico de uma automação dentro da equipe."""
 
     @abstractmethod
+    def buscar_ultimas_por_automacoes_e_equipe(
+        self,
+        automacao_ids: list[UUID],
+        equipe_id: UUID,
+    ) -> dict[UUID, Execucao]:
+        """Busca a execução mais recente de cada automação informada."""
+
+    @abstractmethod
+    def buscar_falha_mais_recente_entre_ultimas_por_equipe(
+        self,
+        equipe_id: UUID,
+    ) -> Execucao | None:
+        """Busca a falha mais recente entre as últimas execuções da equipe."""
+
+    @abstractmethod
     def contar_por_automacao_e_equipe(
         self,
         automacao_id: UUID,

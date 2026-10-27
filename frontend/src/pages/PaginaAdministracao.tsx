@@ -21,7 +21,7 @@ export function PaginaAdministracao() {
   }, []);
 
   return (
-    <main className="min-h-[calc(100vh-77px)] bg-[radial-gradient(circle_at_88%_5%,rgba(191,219,254,0.38),transparent_28%),linear-gradient(155deg,#fff_0%,#f7faff_60%,#f8fafc_100%)] max-[700px]:min-h-[calc(100vh-116px)]">
+    <main className="min-h-[calc(100vh-77px)] bg-flowops-app max-[700px]:min-h-[calc(100vh-116px)]">
       <div className="mx-auto w-[calc(100%_-_48px)] max-w-[1160px] pt-16 pb-[84px] max-[700px]:w-[calc(100%_-_32px)] max-[700px]:pt-[46px] max-[700px]:pb-16">
         <Link
           className="mb-9 inline-flex items-center gap-[7px] text-[12px] font-[650] text-flowops-700 no-underline hover:underline hover:underline-offset-[3px]"

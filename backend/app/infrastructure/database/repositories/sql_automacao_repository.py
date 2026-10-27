@@ -1,7 +1,7 @@
 import json
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import ColumnElement, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -56,10 +56,17 @@ class SqlAutomacaoRepository(AutomacaoRepository):
         equipe_id: UUID,
         offset: int,
         limite: int,
+        busca_nome_normalizado: str | None = None,
+        status: frozenset[StatusAutomacao] = frozenset(),
     ) -> list[Automacao]:
+        filtros = self._filtros_listagem(
+            equipe_id,
+            busca_nome_normalizado,
+            status,
+        )
         modelos = self._session.scalars(
             select(AutomacaoModel)
-            .where(AutomacaoModel.equipe_id == equipe_id)
+            .where(*filtros)
             .order_by(
                 AutomacaoModel.criada_em.desc(),
                 AutomacaoModel.id,
@@ -69,12 +76,60 @@ class SqlAutomacaoRepository(AutomacaoRepository):
         ).all()
         return [self._para_entidade(modelo) for modelo in modelos]
 
-    def contar_por_equipe(self, equipe_id: UUID) -> int:
+    def contar_filtradas_por_equipe(
+        self,
+        equipe_id: UUID,
+        busca_nome_normalizado: str | None = None,
+        status: frozenset[StatusAutomacao] = frozenset(),
+    ) -> int:
+        filtros = self._filtros_listagem(
+            equipe_id,
+            busca_nome_normalizado,
+            status,
+        )
         return self._session.scalar(
             select(func.count())
             .select_from(AutomacaoModel)
-            .where(AutomacaoModel.equipe_id == equipe_id)
+            .where(*filtros)
         ) or 0
+
+    def contar_por_status_e_equipe(
+        self,
+        equipe_id: UUID,
+    ) -> dict[StatusAutomacao, int]:
+        contagens = self._session.execute(
+            select(AutomacaoModel.status, func.count())
+            .where(AutomacaoModel.equipe_id == equipe_id)
+            .group_by(AutomacaoModel.status)
+        ).all()
+        return {
+            StatusAutomacao(status): quantidade
+            for status, quantidade in contagens
+        }
+
+    @staticmethod
+    def _filtros_listagem(
+        equipe_id: UUID,
+        busca_nome_normalizado: str | None,
+        status: frozenset[StatusAutomacao],
+    ) -> list[ColumnElement[bool]]:
+        filtros: list[ColumnElement[bool]] = [
+            AutomacaoModel.equipe_id == equipe_id
+        ]
+        if busca_nome_normalizado:
+            filtros.append(
+                AutomacaoModel.nome_normalizado.contains(
+                    busca_nome_normalizado,
+                    autoescape=True,
+                )
+            )
+        if status:
+            filtros.append(
+                AutomacaoModel.status.in_(
+                    [status_automacao.value for status_automacao in status]
+                )
+            )
+        return filtros
 
     def salvar(self, automacao: Automacao) -> Automacao:
         modelo = AutomacaoModel(

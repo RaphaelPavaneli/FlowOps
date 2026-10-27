@@ -11,9 +11,12 @@ from app.api.dependencies.automacoes import (
     get_listar_automacoes,
 )
 from app.api.schemas.automacoes import (
+    AlertaFalhaAutomacaoResponse,
+    AutomacaoListadaResponse,
     AutomacaoResponse,
     CriarAutomacaoRequest,
     ListaAutomacoesResponse,
+    ResumoAutomacoesResponse,
 )
 from app.application.use_cases.alterar_status_automacao import (
     AlterarStatusAutomacao,
@@ -21,6 +24,7 @@ from app.application.use_cases.alterar_status_automacao import (
 from app.application.use_cases.criar_automacao import CriarAutomacao
 from app.application.use_cases.listar_automacoes import ListarAutomacoes
 from app.domain.entities.usuario import Usuario
+from app.domain.enums.status_automacao import StatusAutomacao
 from app.domain.exceptions.automacoes import (
     AutomacaoNaoEncontradaError,
     AutomacaoNomeDuplicadoError,
@@ -75,24 +79,48 @@ def listar_automacoes(
     ],
     pagina: Annotated[int, Query(ge=1)] = 1,
     itens_por_pagina: Annotated[int, Query(ge=1, le=100)] = 20,
+    busca: Annotated[str | None, Query(max_length=120)] = None,
+    status_filtro: Annotated[
+        list[StatusAutomacao] | None,
+        Query(alias="status"),
+    ] = None,
 ) -> ListaAutomacoesResponse:
     try:
         resultado = caso_de_uso.executar(
             usuario,
             pagina,
             itens_por_pagina,
+            busca,
+            status_filtro,
         )
     except (UsuarioSemEquipeError, EquipeUsuarioIndisponivelError) as erro:
         raise _erro_contexto_equipe(erro) from erro
     return ListaAutomacoesResponse(
         automacoes=[
-            AutomacaoResponse.model_validate(automacao)
-            for automacao in resultado.automacoes
+            AutomacaoListadaResponse(
+                **AutomacaoResponse.model_validate(
+                    item.automacao
+                ).model_dump(),
+                ultima_execucao=item.ultima_execucao,
+            )
+            for item in resultado.automacoes
         ],
         pagina=resultado.pagina,
         itens_por_pagina=resultado.itens_por_pagina,
         total=resultado.total,
         total_paginas=ceil(resultado.total / resultado.itens_por_pagina),
+        resumo=ResumoAutomacoesResponse.model_validate(
+            resultado.resumo,
+            from_attributes=True,
+        ),
+        alerta_falha=(
+            AlertaFalhaAutomacaoResponse.model_validate(
+                resultado.alerta_falha,
+                from_attributes=True,
+            )
+            if resultado.alerta_falha
+            else None
+        ),
     )
 
 

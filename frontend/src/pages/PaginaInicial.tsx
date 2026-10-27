@@ -2,259 +2,351 @@ import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
-  Boxes,
   CheckCircle2,
-  CircleGauge,
-  Code2,
-  Eye,
-  Layers3,
+  Clock3,
+  History,
+  LockKeyhole,
+  Pause,
+  Play,
   ShieldCheck,
-  Sparkles,
+  UsersRound,
+  Workflow,
 } from "lucide-react";
 
 import { Marca } from "../components/Marca";
 
-const beneficios = [
+const etapas = [
+  ["1", "Crie sua conta", "O cadastro cria um usuário comum."],
+  ["2", "Entre em uma equipe", "Um administrador faz a associação."],
+  ["3", "Cadastre a automação", "O registro começa como rascunho."],
+  ["4", "Execute e acompanhe", "Ative, execute, pause e consulte o histórico."],
+] as const;
+
+const automacoesDemonstracao = [
+  ["Teste controlado — sucesso", "Ativa", "Concluída", "1 min 02 s", true],
+  ["Teste controlado — falha", "Pausada", "Falhou", "1 min 00 s", false],
+  ["Validação de cancelamento", "Ativa", "Cancelada", "18 s", true],
+  ["Automação em rascunho", "Rascunho", "Nunca executada", "—", false],
+  ["Teste de concorrência", "Ativa", "Concluída", "1 min 01 s", true],
+] as const;
+
+const capacidades = [
   {
-    titulo: "Centralização",
+    titulo: "Catálogo compartilhado",
     descricao:
-      "Reunir processos, atividades e informações importantes em um único ambiente.",
-    Icone: Layers3,
+      "As automações ficam disponíveis para os integrantes da mesma equipe, sem misturar contextos.",
+    Icone: Workflow,
   },
   {
-    titulo: "Visibilidade",
+    titulo: "Execução acompanhável",
     descricao:
-      "Facilitar o acompanhamento do que está acontecendo em toda a operação.",
-    Icone: Eye,
+      "Acompanhe estados, duração, falhas e cancelamentos sem sair da listagem operacional.",
+    Icone: Clock3,
   },
   {
-    titulo: "Simplicidade",
+    titulo: "Histórico rastreável",
     descricao:
-      "Oferecer uma experiência clara, objetiva e agradável para quem utiliza.",
-    Icone: Sparkles,
+      "Consulte cada execução, seus horários e o resultado persistido para a automação.",
+    Icone: History,
+  },
+  {
+    titulo: "Administração controlada",
+    descricao:
+      "Administradores gerenciam usuários, equipes, perfis e situação das contas.",
+    Icone: UsersRound,
   },
 ];
 
 const tecnologias = [
-  "React e TypeScript",
-  "FastAPI e Python",
-  "SQLAlchemy e SQL Server",
-  "JWT, Argon2id e testes",
+  "React + TypeScript",
+  "FastAPI + Python",
+  "SQLAlchemy + SQL Server",
+  "Pytest + GitHub Actions",
 ];
+
+const classesStatus: Record<string, string> = {
+  Ativa: "bg-[#e9f8ef] text-[#1f7644]",
+  Pausada: "bg-[#fff4db] text-[#8a6218]",
+  Rascunho: "bg-[#eef1f5] text-[#5f6c80]",
+};
+
+const classesExecucao: Record<string, string> = {
+  "Concluída": "text-[#237a45]",
+  Falhou: "text-[#a13a32]",
+  Cancelada: "text-[#8a6218]",
+  "Nunca executada": "text-[#7a8799]",
+};
 
 export function PaginaInicial() {
   useEffect(() => {
-    document.title = "FlowOps | Gestão empresarial com clareza";
+    document.title = "FlowOps | Automações compartilhadas por equipe";
   }, []);
 
   return (
     <div className="min-h-screen bg-white text-flowops-texto">
       <a
-        className="fixed top-3 left-3 z-100 -translate-y-[160%] rounded-[9px] bg-flowops-700 px-3.5 py-2.5 text-white no-underline transition-transform duration-150 focus:translate-y-0"
+        className="fixed top-3 left-3 z-100 -translate-y-[160%] rounded-lg bg-flowops-700 px-3.5 py-2.5 text-sm font-semibold text-white no-underline transition-transform duration-150 focus:translate-y-0"
         href="#conteudo-principal"
       >
         Ir para o conteúdo principal
       </a>
 
-      <header className="sticky top-0 z-20 border-b border-slate-300/70 bg-white/90 backdrop-blur-2xl">
-        <div className="mx-auto grid min-h-17 w-[min(calc(100%_-_2rem),1160px)] grid-cols-[1fr_auto] items-center sm:min-h-19 sm:w-[min(calc(100%_-_3rem),1160px)] lg:grid-cols-[1fr_auto_1fr]">
+      <header className="sticky top-0 z-40 border-b border-[#dde5ef] bg-white/96 backdrop-blur-md">
+        <div className="mx-auto flex min-h-18 w-[min(calc(100%_-_2rem),1440px)] items-center justify-between gap-6 sm:w-[min(calc(100%_-_4rem),1440px)]">
           <Marca />
 
-          <nav className="hidden items-center gap-8.5 lg:flex" aria-label="Navegação principal">
-            <a className="text-[13.5px] font-semibold text-flowops-cinza no-underline transition-colors duration-150 hover:text-flowops-700" href="#projeto">O projeto</a>
-            <a className="text-[13.5px] font-semibold text-flowops-cinza no-underline transition-colors duration-150 hover:text-flowops-700" href="#recursos">Recursos</a>
-            <a className="text-[13.5px] font-semibold text-flowops-cinza no-underline transition-colors duration-150 hover:text-flowops-700" href="#tecnologias">Tecnologias</a>
+          <nav className="hidden items-center gap-7 lg:flex" aria-label="Navegação principal">
+            <a className="text-[13px] font-semibold text-flowops-cinza no-underline hover:text-flowops-700" href="#produto">Produto</a>
+            <a className="text-[13px] font-semibold text-flowops-cinza no-underline hover:text-flowops-700" href="#como-funciona">Como funciona</a>
+            <a className="text-[13px] font-semibold text-flowops-cinza no-underline hover:text-flowops-700" href="#seguranca">Segurança</a>
+            <a className="text-[13px] font-semibold text-flowops-cinza no-underline hover:text-flowops-700" href="#tecnologia">Tecnologia</a>
           </nav>
 
-          <div className="flex items-center justify-self-end gap-2.5">
-            <Link className="hidden min-h-10 items-center justify-center px-2 text-[13px] font-bold text-flowops-700 no-underline hover:text-flowops-900 sm:inline-flex" to="/login">
+          <div className="flex items-center gap-2.5">
+            <Link className="hidden min-h-10 items-center px-2 text-[13px] font-bold text-flowops-700 no-underline hover:text-flowops-900 sm:inline-flex" to="/login">
               Entrar
             </Link>
-            <Link className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-flowops-700 px-3.75 text-[13.5px] font-bold text-white no-underline shadow-[0_9px_20px_rgba(37,99,235,0.18)] transition-[transform,box-shadow] duration-150 hover:-translate-y-px hover:shadow-[0_12px_24px_rgba(37,99,235,0.24)] sm:min-h-11.5 sm:px-5" to="/cadastro">
+            <Link className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-flowops-700 px-4 text-[13px] font-bold text-white no-underline hover:bg-flowops-900" to="/cadastro">
               Criar conta
-              <ArrowRight size={17} aria-hidden="true" />
+              <ArrowRight size={16} aria-hidden="true" />
             </Link>
           </div>
         </div>
       </header>
 
       <main id="conteudo-principal">
-        <section className="relative flex min-h-auto items-center overflow-hidden bg-[radial-gradient(circle_at_83%_16%,rgba(191,219,254,0.5),transparent_30%),radial-gradient(circle_at_8%_86%,rgba(224,231,255,0.45),transparent_27%),linear-gradient(145deg,#fff_0%,#f9fbff_50%,#f7faff_100%)] py-[70px] sm:py-21 sm:pb-24 lg:min-h-[calc(100vh-76px)]">
-          <div className="pointer-events-none absolute top-[8%] -right-[150px] h-[155px] w-[390px] rotate-[-8deg] rounded-l-[90px] border border-[rgba(105,144,224,0.16)]" aria-hidden="true" />
-          <div className="pointer-events-none absolute bottom-[5%] -left-40 h-32.5 w-85 rotate-[8deg] rounded-r-[80px] border border-[rgba(105,144,224,0.16)]" aria-hidden="true" />
-
-          <div className="relative z-2 mx-auto grid w-[min(calc(100%_-_2rem),1160px)] grid-cols-1 items-center gap-16 sm:w-[min(calc(100%_-_3rem),1160px)] lg:grid-cols-[minmax(0,1fr)_minmax(400px,0.88fr)] lg:gap-[clamp(3.5rem,8vw,7rem)]">
-            <div className="mx-auto max-w-180 text-center lg:mx-0 lg:max-w-160 lg:text-left">
-              <span className="mb-5.5 inline-flex items-center gap-1.75 rounded-full border border-[#d9e7fb] bg-flowops-50/86 px-3 py-1.75 text-[11px] font-bold tracking-[0.08em] text-[#315a9f] uppercase">
-                <Sparkles size={15} aria-hidden="true" />
-                Projeto pessoal full-stack
+        <section className="border-b border-[#dce6f1] bg-flowops-app py-16 sm:py-20" id="produto">
+          <div className="mx-auto grid w-[min(calc(100%_-_2rem),1440px)] items-center gap-12 sm:w-[min(calc(100%_-_4rem),1440px)] lg:grid-cols-[0.82fr_1.18fr]">
+            <div className="max-w-160">
+              <span className="inline-flex rounded-full border border-[#cbdcf1] bg-white px-3 py-1.5 text-[10px] font-bold tracking-[0.1em] text-flowops-700 uppercase">
+                MVP full-stack
               </span>
-
-              <h1 className="m-0 max-w-[690px] text-[clamp(2.375rem,11.5vw,3.25rem)] leading-[1.04] font-bold tracking-[-2px] text-flowops-texto sm:text-[clamp(2.625rem,5.2vw,4.125rem)] sm:tracking-[-2.8px]">
-                Gestão empresarial com mais clareza e menos complexidade.
+              <h1 className="mt-5 mb-0 text-[clamp(2.5rem,6vw,4rem)] leading-[1.04] font-bold tracking-[-0.045em] text-flowops-texto">
+                Automações da sua equipe, organizadas e acompanhadas em um só lugar.
               </h1>
-
-              <p className="mx-auto mt-6.25 max-w-150 text-[15.5px] leading-[1.7] text-flowops-cinza sm:text-[clamp(1rem,1.7vw,1.125rem)] lg:mx-0">
-                Organize processos, acompanhe atividades e tenha uma visão
-                centralizada da operação da sua empresa em um único lugar.
+              <p className="mt-6 mb-0 max-w-150 text-[clamp(1rem,1.8vw,1.125rem)] leading-7 text-flowops-cinza">
+                Cadastre automações, acompanhe execuções e consulte o histórico com isolamento por equipe.
               </p>
 
-              <div className="mt-8.5 flex flex-col items-center gap-3.5 sm:flex-row sm:flex-wrap sm:justify-center lg:justify-start">
-                <a className="inline-flex min-h-11.5 w-full items-center justify-center gap-2 rounded-xl bg-linear-to-r from-flowops-700 to-flowops-500 px-5 text-[13.5px] font-bold text-white no-underline shadow-[0_12px_24px_rgba(37,99,235,0.2)] transition-[transform,box-shadow] duration-150 hover:-translate-y-px hover:shadow-[0_15px_30px_rgba(37,99,235,0.27)] sm:w-auto" href="#projeto">
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Link className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-flowops-700 px-5 text-[13px] font-bold text-white no-underline hover:bg-flowops-900" to="/login">
+                  Acessar plataforma
+                  <ArrowRight size={17} aria-hidden="true" />
+                </Link>
+                <a className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[#c9d7e8] bg-white px-5 text-[13px] font-bold text-flowops-700 no-underline hover:bg-flowops-50" href="#como-funciona">
                   Conhecer o projeto
                 </a>
-                <Link className="inline-flex min-h-11.5 w-full items-center justify-center gap-2 px-2 text-[13.5px] font-bold text-flowops-700 no-underline transition-transform duration-150 hover:-translate-y-px sm:w-auto" to="/login">
-                  Acessar plataforma
-                  <ArrowRight size={18} aria-hidden="true" />
-                </Link>
               </div>
 
-              <div className="mt-6.75 flex items-start justify-center gap-2 text-left text-[12.5px] text-[#6a7689] lg:items-center lg:justify-start">
-                <ShieldCheck className="shrink-0 text-flowops-600" size={17} aria-hidden="true" />
-                Construído com foco em segurança, clareza e evolução contínua.
-              </div>
+              <p className="mt-6 mb-0 flex items-start gap-2 text-xs leading-5 text-[#69768a]">
+                <ShieldCheck className="mt-0.5 shrink-0 text-flowops-600" size={16} aria-hidden="true" />
+                Catálogo compartilhado, execução controlada e histórico persistido para cada equipe.
+              </p>
             </div>
 
-            <div className="relative mx-auto w-full max-w-140 rounded-[18px] border border-white/95 bg-white/86 p-4.5 shadow-[0_32px_80px_rgba(30,64,175,0.13),0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-[15px] sm:rounded-[22px] sm:p-6 lg:max-w-none" aria-label="Prévia ilustrativa do FlowOps">
-              <div className="flex items-start justify-between gap-2.5 sm:items-center">
-                <div className="flex flex-col gap-1">
-                  <span className="text-[11.5px] text-[#7a879b]">Visão geral</span>
-                  <strong className="text-[17px]">Resumo da operação</strong>
-                </div>
-                <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-emerald-50 px-2.25 py-1.5 text-[10.5px] font-semibold text-[#287355]">
-                  <span className="size-1.5 rounded-full bg-[#34a476]" aria-hidden="true" /> Operação ativa
-                </span>
-              </div>
+            <PreviewProduto />
+          </div>
+        </section>
 
-              <div className="my-5.5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <article className="flex flex-col rounded-[14px] border border-[#e5ebf4] bg-[#fbfdff] p-4">
-                  <span className="text-[11.5px] text-[#7a879b]">Processos ativos</span>
-                  <strong className="my-1.5 mt-2.25 text-[28px] tracking-[-1px] text-flowops-900">08</strong>
-                  <small className="flex items-center gap-1.25 text-[9.5px] text-[#5e6d82]"><CheckCircle2 className="text-flowops-600" size={13} /> Dentro do fluxo</small>
-                </article>
-                <article className="flex flex-col rounded-[14px] border border-[#e5ebf4] bg-[#fbfdff] p-4">
-                  <span className="text-[11.5px] text-[#7a879b]">Atividades de hoje</span>
-                  <strong className="my-1.5 mt-2.25 text-[28px] tracking-[-1px] text-flowops-900">12</strong>
-                  <small className="flex items-center gap-1.25 text-[9.5px] text-[#5e6d82]"><CircleGauge className="text-flowops-600" size={13} /> Em acompanhamento</small>
-                </article>
-              </div>
+        <section className="py-16 sm:py-20" id="como-funciona">
+          <div className="mx-auto w-[min(calc(100%_-_2rem),1440px)] sm:w-[min(calc(100%_-_4rem),1440px)]">
+            <span className="text-[10px] font-bold tracking-[0.1em] text-flowops-700 uppercase">Como funciona</span>
+            <h2 className="mt-3 mb-0 max-w-150 text-[clamp(1.875rem,4vw,2.5rem)] leading-tight tracking-[-0.035em]">
+              Um fluxo simples, com responsabilidades claras.
+            </h2>
 
-              <div className="rounded-[14px] bg-flowops-50 p-4.25">
-                <div className="mb-3.75 flex items-center justify-between text-[11.5px] font-semibold text-[#7a879b]">
-                  <span>Fluxos recentes</span>
-                  <span>Progresso</span>
-                </div>
-                <div className="flex items-center justify-start gap-2.5">
-                  <span className="grid size-8.75 place-items-center rounded-[10px] bg-white text-flowops-700"><Boxes size={16} /></span>
-                  <div className="flex flex-col gap-0.75">
-                    <strong className="text-[11.5px]">Operação comercial</strong>
-                    <span className="text-[11.5px] text-[#7a879b]">6 de 8 etapas concluídas</span>
+            <ol className="mt-10 grid list-none gap-8 p-0 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
+              {etapas.map(([numero, titulo, descricao], indice) => (
+                <li className="relative grid grid-cols-[44px_1fr] gap-3 lg:grid-cols-1" key={numero}>
+                  <span className="grid size-11 place-items-center rounded-full bg-flowops-50 text-sm font-bold text-flowops-700">{numero}</span>
+                  {indice < etapas.length - 1 && (
+                    <span className="absolute top-5.5 left-13 hidden h-px w-[calc(100%_-_3.75rem)] border-t border-dashed border-[#c9d9ec] lg:block" aria-hidden="true" />
+                  )}
+                  <div className="lg:mt-4">
+                    <h3 className="m-0 text-[15px] font-bold">{titulo}</h3>
+                    <p className="mt-2 mb-0 text-[13px] leading-5 text-flowops-cinza">{descricao}</p>
                   </div>
-                  <span className="ml-auto text-xs font-bold text-flowops-700">75%</span>
-                </div>
-                <div className="mt-3.25 h-1.25 overflow-hidden rounded-[10px] bg-[#dbe6f7]"><span className="block h-full w-3/4 rounded-[inherit] bg-linear-to-r from-flowops-700 to-[#5d8ff2]" /></div>
-              </div>
-
-              <span className="mt-2.75 block text-right text-[9.5px] text-[#909bae]">Dados meramente ilustrativos</span>
-            </div>
+                </li>
+              ))}
+            </ol>
           </div>
         </section>
 
-        <section className="py-20.5 sm:py-28" id="projeto">
-          <div className="mx-auto grid w-[min(calc(100%_-_2rem),1160px)] grid-cols-1 gap-7.5 sm:w-[min(calc(100%_-_3rem),1160px)] sm:gap-15 lg:grid-cols-[0.8fr_1.2fr] lg:gap-[clamp(3.75rem,10vw,8.75rem)]">
+        <section className="border-y border-[#dfe7f0] bg-[#f8fafc] py-16 sm:py-20">
+          <div className="mx-auto grid w-[min(calc(100%_-_2rem),1440px)] gap-10 sm:w-[min(calc(100%_-_4rem),1440px)] lg:grid-cols-[0.72fr_1.28fr] lg:gap-30">
             <div>
-              <span className="mb-3.5 block text-[11px] font-bold tracking-[0.11em] text-flowops-700 uppercase">O propósito</span>
-              <h2 className="m-0 text-[31px] leading-[1.14] font-bold tracking-[-1px] text-flowops-texto sm:text-[clamp(1.875rem,4vw,2.6875rem)] sm:tracking-[-1.5px]">Por que o FlowOps foi criado?</h2>
-            </div>
-
-            <div className="grid gap-5">
-              <p className="m-0 text-[15.5px] leading-[1.8] text-flowops-cinza">
-                Muitas empresas ainda controlam suas operações usando planilhas
-                separadas, mensagens, anotações e sistemas que não conversam
-                entre si. Isso dificulta o acompanhamento e aumenta o risco de
-                informações importantes se perderem.
-              </p>
-              <p className="m-0 text-[15.5px] leading-[1.8] text-flowops-cinza">
-                O FlowOps nasceu como um projeto pessoal para explorar uma
-                solução simples e centralizada de gerenciamento empresarial,
-                aplicando boas práticas modernas de desenvolvimento full-stack.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <section className="bg-linear-to-b from-[#f8fbff] to-[#f5f9ff] py-20.5 sm:py-28" id="recursos">
-          <div className="mx-auto w-[min(calc(100%_-_2rem),1160px)] sm:w-[min(calc(100%_-_3rem),1160px)]">
-            <div className="mx-auto mb-13.75 max-w-162.5 text-center">
-              <span className="mb-3.5 block text-[11px] font-bold tracking-[0.11em] text-flowops-700 uppercase">Objetivos do produto</span>
-              <h2 className="m-0 text-[31px] leading-[1.14] font-bold tracking-[-1px] text-flowops-texto sm:text-[clamp(1.875rem,4vw,2.6875rem)] sm:tracking-[-1.5px]">Uma operação mais fácil de compreender</h2>
-              <p className="mt-4.5 text-[15.5px] leading-[1.8] text-flowops-cinza">
-                Três princípios orientam cada decisão de produto e mantêm a
-                experiência organizada.
+              <span className="text-[10px] font-bold tracking-[0.1em] text-flowops-700 uppercase">Capacidades do MVP</span>
+              <h2 className="mt-3 mb-0 text-[clamp(1.875rem,4vw,2.5rem)] leading-tight tracking-[-0.035em]">
+                O necessário para operar e demonstrar o fluxo completo.
+              </h2>
+              <p className="mt-5 mb-0 text-sm leading-6 text-flowops-cinza">
+                O FlowOps mantém o escopo propositalmente objetivo: organizar automações da equipe e acompanhar execuções controladas com segurança.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-              {beneficios.map(({ titulo, descricao, Icone }) => (
-                <article className="rounded-[18px] border border-[#e4eaf3] bg-white/90 p-6.25 shadow-[0_12px_36px_rgba(30,64,175,0.05)] sm:p-7.5" key={titulo}>
-                  <span className="grid size-11.25 place-items-center rounded-[13px] bg-flowops-50 text-flowops-700"><Icone size={22} /></span>
-                  <h3 className="mt-5.5 mb-2.5 text-lg font-bold">{titulo}</h3>
-                  <p className="m-0 text-[13.5px] leading-[1.7] text-flowops-cinza">{descricao}</p>
+            <div className="grid border-t border-[#d8e1ec] sm:grid-cols-2">
+              {capacidades.map(({ titulo, descricao, Icone }, indice) => (
+                <article className={`border-b border-[#d8e1ec] py-8 sm:px-8 ${indice % 2 === 0 ? "sm:border-r" : ""}`} key={titulo}>
+                  <Icone className="text-flowops-700" size={20} strokeWidth={1.8} aria-hidden="true" />
+                  <h3 className="mt-4 mb-0 text-[15px] font-bold">{titulo}</h3>
+                  <p className="mt-2 mb-0 text-[13px] leading-5 text-flowops-cinza">{descricao}</p>
                 </article>
               ))}
             </div>
           </div>
         </section>
 
-        <section className="py-20.5 sm:py-28" id="tecnologias">
-          <div className="mx-auto grid w-[min(calc(100%_-_2rem),1160px)] grid-cols-1 items-center gap-9.5 rounded-[19px] border border-[#dce7f6] bg-[radial-gradient(circle_at_95%_0%,rgba(191,219,254,0.42),transparent_37%),#fbfdff] px-6 py-7.5 sm:w-[min(calc(100%_-_3rem),1160px)] sm:gap-9.5 sm:rounded-3xl sm:p-11 lg:grid-cols-[1.15fr_0.85fr] lg:gap-20 lg:p-15">
+        <section className="bg-flowops-sidebar-top py-16 text-white sm:py-20" id="seguranca">
+          <div className="mx-auto grid w-[min(calc(100%_-_2rem),1440px)] items-start gap-10 sm:w-[min(calc(100%_-_4rem),1440px)] lg:grid-cols-[0.9fr_1.1fr] lg:gap-20">
             <div>
-              <span className="mb-6 grid size-11.25 place-items-center rounded-[13px] bg-flowops-50 text-flowops-700"><Code2 size={23} /></span>
-              <span className="mb-3.5 block text-[11px] font-bold tracking-[0.11em] text-flowops-700 uppercase">Construção full-stack</span>
-              <h2 className="m-0 text-[31px] leading-[1.14] font-bold tracking-[-1px] text-flowops-texto sm:text-[clamp(1.875rem,4vw,2.6875rem)] sm:tracking-[-1.5px]">Um projeto pessoal desenvolvido do início ao fim</h2>
-              <p className="mt-5 text-[15.5px] leading-[1.8] text-flowops-cinza">
-                O FlowOps representa uma jornada de evolução que conecta
-                interface, regras de negócio, segurança, banco de dados e boas
-                práticas de arquitetura.
+              <span className="text-[10px] font-bold tracking-[0.1em] text-[#8ebfff] uppercase">Segurança por padrão</span>
+              <h2 className="mt-3 mb-0 text-[clamp(1.875rem,4vw,2.5rem)] leading-tight tracking-[-0.035em]">
+                A equipe não é escolhida pelo cliente.
+              </h2>
+              <p className="mt-5 mb-0 max-w-130 text-sm leading-6 text-[#b8c8db]">
+                O backend recarrega o usuário autenticado, resolve sua equipe ativa e aplica esse contexto em consultas e gravações.
               </p>
             </div>
 
-            <ul className="m-0 grid list-none gap-3 p-0">
-              {tecnologias.map((tecnologia) => (
-                <li className="flex items-center gap-2.5 rounded-xl border border-[#e4eaf3] bg-white/90 px-4 py-3.5 text-[13px] font-semibold text-[#39475d]" key={tecnologia}>
-                  <CheckCircle2 className="shrink-0 text-flowops-600" size={18} aria-hidden="true" />
-                  {tecnologia}
+            <ul className="m-0 grid list-none border-t border-white/15 p-0">
+              {[
+                "Senhas protegidas com Argon2id.",
+                "Sessão autenticada com JWT e revalidação do usuário.",
+                "Cadastro público sem escolha de perfil ou equipe.",
+                "Dados de automações e execuções isolados por equipe.",
+              ].map((item) => (
+                <li className="flex items-center gap-3 border-b border-white/15 py-4 text-sm text-[#dbe7f5]" key={item}>
+                  <CheckCircle2 className="shrink-0 text-[#75aefa]" size={18} aria-hidden="true" />
+                  {item}
                 </li>
               ))}
             </ul>
           </div>
         </section>
 
-        <section className="pt-8 pb-20.5 sm:pb-28">
-          <div className="mx-auto flex w-[min(calc(100%_-_2rem),1160px)] flex-col items-center text-center sm:w-[min(calc(100%_-_3rem),1160px)]">
-            <span className="mb-5.5 grid size-11.25 place-items-center rounded-[13px] bg-flowops-50 text-flowops-700"><CircleGauge size={27} /></span>
-            <h2 className="m-0 text-[31px] leading-[1.14] font-bold tracking-[-1px] text-flowops-texto sm:text-[clamp(1.875rem,4vw,2.6875rem)] sm:tracking-[-1.5px]">Pronto para conhecer o FlowOps?</h2>
-            <p className="mt-3.75 text-[15.5px] leading-[1.8] text-flowops-cinza">Acesse a plataforma e acompanhe a evolução deste projeto.</p>
-            <Link className="mt-7 inline-flex min-h-11.5 items-center justify-center gap-2 rounded-xl bg-linear-to-r from-flowops-700 to-flowops-500 px-5 text-[13.5px] font-bold text-white no-underline shadow-[0_12px_24px_rgba(37,99,235,0.2)] transition-[transform,box-shadow] duration-150 hover:-translate-y-px hover:shadow-[0_15px_30px_rgba(37,99,235,0.27)]" to="/login">
-              Acessar plataforma
-              <ArrowRight size={18} aria-hidden="true" />
-            </Link>
+        <section className="py-16 sm:py-20" id="tecnologia">
+          <div className="mx-auto w-[min(calc(100%_-_2rem),1440px)] sm:w-[min(calc(100%_-_4rem),1440px)]">
+            <div className="grid items-center gap-8 border-b border-[#dce5ef] pb-10 lg:grid-cols-[0.8fr_1.2fr]">
+              <div>
+                <span className="text-[10px] font-bold tracking-[0.1em] text-flowops-700 uppercase">MVP full-stack</span>
+                <h2 className="mt-3 mb-0 text-[clamp(1.875rem,4vw,2.5rem)] leading-tight tracking-[-0.035em]">
+                  Produto funcional, arquitetura demonstrável.
+                </h2>
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {tecnologias.map((tecnologia) => (
+                  <span className="flex min-h-16 items-center justify-center rounded-lg border border-[#dce5ef] bg-[#fbfcfe] px-4 text-center text-[13px] font-semibold text-[#3e4b60]" key={tecnologia}>
+                    {tecnologia}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-8 flex items-start gap-3 rounded-lg border border-[#dbe5f0] bg-flowops-50 px-4 py-3 text-[13px] leading-5 text-[#526077]">
+              <LockKeyhole className="mt-0.5 shrink-0 text-flowops-700" size={18} aria-hidden="true" />
+              <p className="m-0">
+                O executor atual processa cenários controlados em uma única instância. Integrações externas e filas distribuídas permanecem no roadmap.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-t border-[#dfe7f0] bg-flowops-app py-16 sm:py-20">
+          <div className="mx-auto flex w-[min(calc(100%_-_2rem),860px)] flex-col items-center text-center sm:w-[min(calc(100%_-_3rem),860px)]">
+            <h2 className="m-0 text-[clamp(1.875rem,4vw,2.5rem)] leading-tight tracking-[-0.035em]">Conheça o fluxo completo do FlowOps.</h2>
+            <p className="mt-4 mb-0 max-w-150 text-sm leading-6 text-flowops-cinza">
+              Entre com sua conta ou faça um cadastro como usuário comum para conhecer a experiência do MVP.
+            </p>
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <Link className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-flowops-700 px-5 text-[13px] font-bold text-white no-underline hover:bg-flowops-900" to="/login">
+                Acessar plataforma
+                <ArrowRight size={17} aria-hidden="true" />
+              </Link>
+              <a className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[#c9d7e8] bg-white px-5 text-[13px] font-bold text-flowops-700 no-underline hover:bg-flowops-50" href="https://github.com/RaphaelPavaneli/FlowOps" rel="noreferrer" target="_blank">
+                Ver no GitHub
+              </a>
+            </div>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-[#e8edf4] bg-[#fbfcfe]">
-        <div className="mx-auto flex w-[min(calc(100%_-_2rem),1160px)] flex-col items-start gap-10 py-10.5 sm:w-[min(calc(100%_-_3rem),1160px)] sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <Marca />
-            <p className="mt-2.5 mb-0 text-[11.5px] leading-[1.7] text-[#7a8799]">Gestão que flui com você.</p>
-          </div>
-          <p className="m-0 text-left text-[11.5px] leading-[1.7] text-[#7a8799] sm:text-right">
-            Projeto pessoal desenvolvido para aprendizado e evolução full-stack.
+      <footer className="border-t border-[#dfe7f0] bg-white">
+        <div className="mx-auto flex w-[min(calc(100%_-_2rem),1440px)] flex-col gap-6 py-8 sm:w-[min(calc(100%_-_4rem),1440px)] sm:flex-row sm:items-center sm:justify-between">
+          <Marca />
+          <p className="m-0 text-xs leading-5 text-[#748196] sm:text-right">
+            MVP de portfólio para organização e execução controlada de automações.
             <br />© {new Date().getFullYear()} FlowOps.
           </p>
         </div>
       </footer>
+    </div>
+  );
+}
+
+function PreviewProduto() {
+  return (
+    <div className="overflow-hidden rounded-xl border border-[#d7e1ed] bg-white shadow-[0_22px_55px_rgba(20,52,96,0.12)]" aria-label="Prévia da listagem de automações do FlowOps">
+      <div className="flex min-h-12 items-center justify-between border-b border-[#e1e7ef] px-4">
+        <span className="text-sm font-bold text-flowops-900">FlowOps</span>
+        <span className="rounded-full bg-[#eef2f7] px-2.5 py-1 text-[10px] font-semibold text-[#536176]">Equipe Operações</span>
+      </div>
+
+      <div className="grid min-h-120 md:grid-cols-[150px_1fr]">
+        <aside className="hidden border-r border-[#e1e7ef] bg-[#fbfcfe] p-3 md:flex md:flex-col" aria-label="Exemplo de navegação">
+          <span className="flex min-h-9 items-center gap-2 rounded-md px-2 text-[10px] font-semibold text-[#657287]">
+            <Workflow size={14} aria-hidden="true" /> Visão geral
+          </span>
+          <span className="flex min-h-9 items-center gap-2 rounded-md bg-flowops-50 px-2 text-[10px] font-bold text-flowops-700">
+            <Workflow size={14} aria-hidden="true" /> Automações
+          </span>
+          <span className="mt-auto px-2 py-2 text-[10px] font-semibold text-[#657287]">Minha conta</span>
+        </aside>
+
+        <div className="min-w-0 p-4 sm:p-5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <span className="text-[10px] font-semibold text-[#78869a]">Operação</span>
+              <h2 className="m-0 mt-2 text-base">Automações</h2>
+            </div>
+            <span className="inline-flex min-h-8 items-center rounded-md bg-flowops-700 px-3 text-[10px] font-bold text-white mt-6">Nova automação</span>
+          </div>
+
+          <div className="mb-3 flex min-h-8 items-center rounded-md border border-[#dce4ee] px-3 text-[10px] text-[#8a96a7]">Buscar por nome</div>
+
+          <div className="overflow-x-auto rounded-lg border border-[#dce4ee]">
+            <table className="w-full min-w-125 border-collapse text-left text-[10px] lg:text-[11px]">
+              <thead className="bg-[#f7f9fc] text-[#718096] uppercase">
+                <tr>
+                  <th className="px-3 py-2.5 font-bold">Automação</th>
+                  <th className="px-2 py-2.5 font-bold">Status</th>
+                  <th className="px-2 py-2.5 font-bold">Última execução</th>
+                  <th className="px-2 py-2.5 font-bold">Duração</th>
+                  <th className="px-3 py-2.5 font-bold">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {automacoesDemonstracao.map(([nome, status, execucao, duracao, podePausar]) => (
+                  <tr className="border-t border-[#e5eaf1]" key={nome}>
+                    <td className="max-w-40 px-3 py-3 font-semibold text-[#263247]">{nome}</td>
+                    <td className="px-2 py-3">
+                      <span className={`inline-flex rounded-full px-2 py-1 font-bold ${classesStatus[status]}`}>{status}</span>
+                    </td>
+                    <td className={`px-2 py-3 font-semibold ${classesExecucao[execucao]}`}>{execucao}</td>
+                    <td className="px-2 py-3 text-[#5d6b7f]">{duracao}</td>
+                    <td className="px-3 py-3">
+                      <span className="flex items-center gap-2 text-flowops-700">
+                        <History size={12} aria-hidden="true" />
+                        <Play size={12} aria-hidden="true" />
+                        {podePausar && <Pause size={12} aria-hidden="true" />}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

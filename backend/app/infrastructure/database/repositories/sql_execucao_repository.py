@@ -165,6 +165,83 @@ class SqlExecucaoRepository(ExecucaoRepository):
         ).all()
         return [self._para_entidade(modelo) for modelo in modelos]
 
+    def buscar_ultimas_por_automacoes_e_equipe(
+        self,
+        automacao_ids: list[UUID],
+        equipe_id: UUID,
+    ) -> dict[UUID, Execucao]:
+        if not automacao_ids:
+            return {}
+
+        posicao = func.row_number().over(
+            partition_by=ExecucaoModel.automacao_id,
+            order_by=(
+                ExecucaoModel.criada_em.desc(),
+                ExecucaoModel.id,
+            ),
+        )
+        execucoes_ordenadas = (
+            select(
+                ExecucaoModel.id.label("execucao_id"),
+                posicao.label("posicao"),
+            )
+            .where(
+                ExecucaoModel.automacao_id.in_(automacao_ids),
+                ExecucaoModel.equipe_id == equipe_id,
+            )
+            .subquery()
+        )
+        modelos = self._session.scalars(
+            select(ExecucaoModel)
+            .join(
+                execucoes_ordenadas,
+                ExecucaoModel.id == execucoes_ordenadas.c.execucao_id,
+            )
+            .where(execucoes_ordenadas.c.posicao == 1)
+        ).all()
+
+        return {
+            modelo.automacao_id: self._para_entidade(modelo)
+            for modelo in modelos
+        }
+
+    def buscar_falha_mais_recente_entre_ultimas_por_equipe(
+        self,
+        equipe_id: UUID,
+    ) -> Execucao | None:
+        posicao = func.row_number().over(
+            partition_by=ExecucaoModel.automacao_id,
+            order_by=(
+                ExecucaoModel.criada_em.desc(),
+                ExecucaoModel.id,
+            ),
+        )
+        execucoes_ordenadas = (
+            select(
+                ExecucaoModel.id.label("execucao_id"),
+                posicao.label("posicao"),
+            )
+            .where(ExecucaoModel.equipe_id == equipe_id)
+            .subquery()
+        )
+        modelo = self._session.scalar(
+            select(ExecucaoModel)
+            .join(
+                execucoes_ordenadas,
+                ExecucaoModel.id == execucoes_ordenadas.c.execucao_id,
+            )
+            .where(
+                execucoes_ordenadas.c.posicao == 1,
+                ExecucaoModel.status == StatusExecucao.FALHOU.value,
+            )
+            .order_by(
+                ExecucaoModel.criada_em.desc(),
+                ExecucaoModel.id,
+            )
+            .limit(1)
+        )
+        return self._para_entidade(modelo) if modelo else None
+
     def contar_por_automacao_e_equipe(
         self,
         automacao_id: UUID,

@@ -1,5 +1,14 @@
-import { LogOut, ShieldCheck } from "lucide-react";
-import { NavLink, Outlet } from "react-router-dom";
+import { useEffect, useState } from "react";
+import {
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  ShieldCheck,
+  UserRound,
+  Workflow,
+  X,
+} from "lucide-react";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 
 import { useAutenticacao } from "../contexts/ContextoAutenticacao";
 import { Marca } from "./Marca";
@@ -16,90 +25,203 @@ function obterIniciais(nome: string) {
 
 function obterClasseNavegacao(ativo: boolean) {
   const classesBase =
-    "whitespace-nowrap rounded-[9px] px-[13px] py-[9px] text-[12.5px] font-[650] no-underline transition-colors";
+    "flex min-h-10 items-center gap-3 rounded-lg px-3 text-sm font-semibold no-underline transition-colors";
   const classesEstado = ativo
-    ? "bg-flowops-50 text-flowops-700"
-    : "text-[#667287] hover:bg-flowops-50 hover:text-flowops-700";
+    ? "bg-white/10 text-white shadow-[inset_3px_0_0_#60a5fa]"
+    : "text-[#c4d1e2] hover:bg-white/[0.07] hover:text-white";
 
   return `${classesBase} ${classesEstado}`;
 }
 
+interface NavegacaoLateralProps {
+  administrador: boolean;
+  aberta: boolean;
+  nomeUsuario: string;
+  perfilUsuario: string;
+  aoFechar: () => void;
+  aoSair: () => void;
+}
+
+function NavegacaoLateral({
+  administrador,
+  aberta,
+  nomeUsuario,
+  perfilUsuario,
+  aoFechar,
+  aoSair,
+}: NavegacaoLateralProps) {
+  return (
+    <aside
+      className={`fixed inset-y-0 left-0 z-50 flex w-[272px] flex-col border-r border-white/10 bg-[linear-gradient(180deg,var(--color-flowops-sidebar-top)_0%,var(--color-flowops-sidebar-middle)_52%,var(--color-flowops-sidebar-bottom)_100%)] transition-transform duration-200 lg:sticky lg:top-0 lg:z-20 lg:h-screen lg:w-[232px] lg:translate-x-0 ${
+        aberta
+          ? "visible translate-x-0"
+          : "invisible -translate-x-full pointer-events-none lg:visible lg:pointer-events-auto"
+      }`}
+      id="navegacao-lateral"
+      aria-label="Navegação principal"
+    >
+      <div className="flex min-h-16 items-center justify-between border-b border-white/10 px-4 lg:min-h-[72px] lg:px-5">
+        <Marca clara />
+        <button
+          className="grid size-9 cursor-pointer place-items-center rounded-lg border-0 bg-transparent text-[#c4d1e2] hover:bg-white/10 hover:text-white lg:hidden"
+          type="button"
+          aria-label="Fechar navegação"
+          onClick={aoFechar}
+        >
+          <X size={19} aria-hidden="true" />
+        </button>
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col px-3 py-5 lg:px-4">
+        <span className="mb-2 px-3 text-[10px] font-bold tracking-[0.08em] text-[#7f9cc4] uppercase">
+          Espaço de trabalho
+        </span>
+
+        <nav className="grid gap-1" aria-label="Áreas do FlowOps">
+          <NavLink
+            className={({ isActive }) => obterClasseNavegacao(isActive)}
+            to="/app/dashboard"
+          >
+            <LayoutDashboard size={18} strokeWidth={1.8} aria-hidden="true" />
+            Visão geral
+          </NavLink>
+          <NavLink
+            className={({ isActive }) => obterClasseNavegacao(isActive)}
+            to="/app/automacoes"
+          >
+            <Workflow size={18} strokeWidth={1.8} aria-hidden="true" />
+            Automações
+          </NavLink>
+          {administrador && (
+            <NavLink
+              className={({ isActive }) => obterClasseNavegacao(isActive)}
+              to="/app/administracao"
+            >
+              <ShieldCheck size={18} strokeWidth={1.8} aria-hidden="true" />
+              Administração
+            </NavLink>
+          )}
+        </nav>
+
+        <div className="mt-auto border-t border-white/10 pt-4">
+          <NavLink
+            className={({ isActive }) => obterClasseNavegacao(isActive)}
+            to="/app/minha-conta"
+          >
+            <UserRound size={18} strokeWidth={1.8} aria-hidden="true" />
+            Minha conta
+          </NavLink>
+
+          <div className="mt-3 flex items-center gap-3 px-2 py-2">
+            <span
+              className="grid size-9 shrink-0 place-items-center rounded-full bg-white/10 text-[11px] font-bold text-white ring-1 ring-white/10"
+              aria-hidden="true"
+            >
+              {obterIniciais(nomeUsuario)}
+            </span>
+            <span className="min-w-0 flex-1">
+              <strong className="block truncate text-xs text-white">
+                {nomeUsuario}
+              </strong>
+              <small className="mt-0.5 block text-[10px] text-[#93a8c5]">
+                {perfilUsuario}
+              </small>
+            </span>
+            <button
+              className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-lg border-0 bg-transparent text-[#a9bbd1] transition-colors hover:bg-white/10 hover:text-white"
+              type="button"
+              aria-label="Sair do FlowOps"
+              title="Sair"
+              onClick={aoSair}
+            >
+              <LogOut size={17} strokeWidth={1.8} aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
 export function LayoutAutenticado() {
   const { usuario, sair } = useAutenticacao();
+  const localizacao = useLocation();
+  const [navegacaoAberta, setNavegacaoAberta] = useState(false);
+
+  useEffect(() => {
+    setNavegacaoAberta(false);
+  }, [localizacao.pathname]);
+
+  useEffect(() => {
+    if (!navegacaoAberta) {
+      return;
+    }
+
+    const tratarTecla = (evento: KeyboardEvent) => {
+      if (evento.key === "Escape") {
+        setNavegacaoAberta(false);
+      }
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", tratarTecla);
+
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", tratarTecla);
+    };
+  }, [navegacaoAberta]);
 
   if (!usuario) {
     return null;
   }
 
   const administrador = usuario.perfil_acesso === "administrador";
+  const perfilUsuario = administrador ? "Administrador" : "Usuário";
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="sticky top-0 z-20 border-b border-[#d7deea]/80 bg-white/90 backdrop-blur-2xl">
-        <div className="grid min-h-[68px] w-full grid-cols-[auto_1fr] items-center px-4 min-[701px]:min-h-[76px] min-[701px]:px-6 min-[961px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] min-[961px]:px-[2%]">
-          <Marca />
-
-          <nav
-            className="col-span-2 row-start-2 flex items-center justify-start gap-2 overflow-x-auto border-t border-[#edf1f6] pt-[7px] pb-2.5 min-[701px]:justify-center min-[961px]:col-span-1 min-[961px]:col-start-2 min-[961px]:row-start-1 min-[961px]:justify-self-center min-[961px]:overflow-visible min-[961px]:border-t-0 min-[961px]:py-0"
-            aria-label="Navegação da aplicação"
-          >
-            <NavLink
-              className={({ isActive }) => obterClasseNavegacao(isActive)}
-              to="/app/dashboard"
-            >
-              Dashboard
-            </NavLink>
-            <NavLink
-              className={({ isActive }) => obterClasseNavegacao(isActive)}
-              to="/app/automacoes"
-            >
-              Automações
-            </NavLink>
-            {administrador && (
-              <NavLink
-                className={({ isActive }) => obterClasseNavegacao(isActive)}
-                to="/app/administracao"
-              >
-                Administração
-              </NavLink>
-            )}
-            <NavLink
-              className={({ isActive }) => obterClasseNavegacao(isActive)}
-              to="/app/minha-conta"
-            >
-              Minha conta
-            </NavLink>
-          </nav>
-
-          <div className="col-start-2 row-start-1 flex items-center justify-self-end gap-2.5 min-[961px]:col-start-3">
-            <span
-              className="grid size-[35px] place-items-center rounded-[11px] bg-flowops-50 text-[11px] font-[750] text-flowops-700"
-              aria-hidden="true"
-            >
-              {obterIniciais(usuario.nome)}
-            </span>
-            <span className="hidden max-w-[150px] flex-col gap-0.5 min-[701px]:flex">
-              <strong className="overflow-hidden text-ellipsis whitespace-nowrap text-[11.5px] text-[#344055]">
-                {usuario.nome}
-              </strong>
-              <small className="flex items-center gap-1 text-[9.5px] text-[#7c899c]">
-                {administrador && <ShieldCheck size={12} aria-hidden="true" />}
-                {administrador ? "Administrador" : "Usuário"}
-              </small>
-            </span>
-            <button
-              className="inline-flex size-[38px] min-h-[38px] cursor-pointer items-center justify-center gap-2 rounded-[11px] border border-[#d7e1ef] bg-white/90 p-0 text-[12.5px] font-[650] text-[#536177] transition-colors hover:border-[#b9c9df] hover:bg-flowops-50 hover:text-flowops-700 min-[701px]:h-auto min-[701px]:w-auto min-[701px]:min-h-10 min-[701px]:px-[15px]"
-              type="button"
-              onClick={sair}
-            >
-              <LogOut size={17} aria-hidden="true" />
-              <span className="hidden min-[701px]:inline">Sair</span>
-            </button>
-          </div>
-        </div>
+    <div className="min-h-screen bg-flowops-app lg:grid lg:grid-cols-[232px_minmax(0,1fr)]">
+      <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between border-b border-[#e2e7ee] bg-white px-4 lg:hidden">
+        <button
+          className="grid size-10 cursor-pointer place-items-center rounded-lg border border-[#dfe5ec] bg-white text-[#344055] hover:bg-[#f7f9fc]"
+          type="button"
+          aria-label="Abrir navegação"
+          aria-controls="navegacao-lateral"
+          aria-expanded={navegacaoAberta}
+          onClick={() => setNavegacaoAberta(true)}
+        >
+          <Menu size={20} aria-hidden="true" />
+        </button>
+        <Marca />
+        <span
+          className="grid size-9 place-items-center rounded-full bg-[#eef2f6] text-[11px] font-bold text-[#344055]"
+          aria-hidden="true"
+        >
+          {obterIniciais(usuario.nome)}
+        </span>
       </header>
 
-      <Outlet />
+      {navegacaoAberta && (
+        <button
+          className="fixed inset-0 z-40 cursor-default border-0 bg-[#172033]/35 lg:hidden"
+          type="button"
+          aria-label="Fechar navegação"
+          onClick={() => setNavegacaoAberta(false)}
+        />
+      )}
+
+      <NavegacaoLateral
+        administrador={administrador}
+        aberta={navegacaoAberta}
+        nomeUsuario={usuario.nome}
+        perfilUsuario={perfilUsuario}
+        aoFechar={() => setNavegacaoAberta(false)}
+        aoSair={sair}
+      />
+
+      <div className="min-w-0 bg-flowops-app">
+        <Outlet />
+      </div>
     </div>
   );
 }

@@ -225,7 +225,7 @@ export function PaginaGestaoUsuarios() {
   const alteracaoEmAndamento = usuarioEmAlteracaoId !== null;
 
   return (
-    <main className="min-h-[calc(100vh-77px)] bg-[#f7f9fc] max-[700px]:min-h-[calc(100vh-116px)]">
+    <main className="min-h-[calc(100vh-77px)] bg-flowops-app max-[700px]:min-h-[calc(100vh-116px)]">
       <div className="mx-auto w-[calc(100%_-_48px)] max-w-[1160px] py-12 max-[700px]:w-[calc(100%_-_32px)] max-[700px]:py-9">
         <Link
           className="mb-7 inline-flex items-center gap-2 text-[12.5px] font-semibold text-flowops-700 no-underline hover:text-flowops-900"
